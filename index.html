@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>⛏️ Шахтёр</title>
+    <!-- Подключаем Telegram Mini Apps библиотеку -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Стили для красоты, как в приложении */
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats {
+            background: #2a2a2a;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .energy-bar {
+            background: #333;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .energy-fill {
+            background: #f1c40f;
+            height: 100%;
+            width: 80%; /* Будет меняться через JS */
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        button {
+            background-color: #3a3a3a;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            margin: 7px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 45%;
+            font-weight: bold;
+        }
+        button:active {
+            background-color: #f1c40f;
+            color: black;
+        }
+        #mineBtn {
+            width: 90%;
+            background-color: #c4450c;
+            font-size: 22px;
+            padding: 20px;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            min-height: 30px;
+            font-size: 16px;
+            color: #f1c40f;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Верхняя панель с ресурсами -->
+    <div class="stats">
+        <div>💰 Монеты: <span id="coins">150</span></div>
+        <div>🔨 Кирка: <span id="pickaxeName">Каменная</span> (Ур. <span id="pickLevel">2</span>)</div>
+        <div>⚡ Энергия: <span id="energy">10</span> / <span id="maxEnergy">10</span></div>
+        <div class="energy-bar">
+            <div class="energy-fill" id="energyFill"></div>
+        </div>
+    </div>
+
+    <!-- Инвентарь (руда) -->
+    <div class="stats">
+        <h3>🎒 Руда в инвентаре</h3>
+        <div>🗿 Камень: <span id="stone">0</span></div>
+        <div>⚙️ Железо: <span id="iron">0</span></div>
+        <div>🥇 Золото: <span id="gold">0</span></div>
+        <div>💎 Алмазы: <span id="diamond">0</span></div>
+    </div>
+
+    <!-- Главная кнопка -->
+    <button id="mineBtn" onclick="mine()">⛏️ КОПАТЬ</button>
+
+    <!-- Остальные кнопки -->
+    <button onclick="sellAll()">💰 Продать всё</button>
+    <button onclick="upgrade()">🔨 Улучшить (200)</button>
+    <button onclick="buyEnergy()">🧪 Купить энергию (50 монет)</button>
+
+    <!-- Лог событий -->
+    <div id="log">Нажми "Копать", чтобы начать!</div>
+
+    <script>
+        // ОБЯЗАТЕЛЬНО: Говорим Telegram, что приложение готово
+        window.Telegram.WebApp.ready();
+
+        // ИГРОВЫЕ ПЕРЕМЕННЫЕ (Пока без сервера, всё в памяти браузера)
+        let coins = 150;
+        let energy = 10;
+        let maxEnergy = 10;
+        let pickLevel = 2; // 1-дерево, 2-камень, 3-железо, 4-золото, 5-лазер
+        let pickName = "Каменная";
+
+        // Инвентарь руды
+        let inventory = {
+            stone: 0,
+            iron: 0,
+            gold: 0,
+            diamond: 0
+        };
+
+        // Шансы руды для каждой кирки (камень, железо, золото, алмаз)
+        const oreChances = {
+            1: [70, 20, 10, 0],
+            2: [50, 30, 15, 5],
+            3: [30, 35, 25, 10],
+            4: [10, 30, 40, 20],
+            5: [0,  25, 45, 30]
+        };
+
+        function updateUI() {
+            document.getElementById('coins').innerText = coins;
+            document.getElementById('energy').innerText = energy;
+            document.getElementById('maxEnergy').innerText = maxEnergy;
+            document.getElementById('pickaxeName').innerText = pickName;
+            document.getElementById('pickLevel').innerText = pickLevel;
+            
+            // Полоска энергии
+            document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
+            
+            // Инвентарь
+            document.getElementById('stone').innerText = inventory.stone;
+            document.getElementById('iron').innerText = inventory.iron;
+            document.getElementById('gold').innerText = inventory.gold;
+            document.getElementById('diamond').innerText = inventory.diamond;
+
+            // Проверка на отсутствие энергии
+            let btn = document.getElementById('mineBtn');
+            if (energy <= 0) {
+                btn.innerText = "😴 НЕТ ЭНЕРГИИ";
+                btn.style.opacity = "0.5";
+            } else {
+                btn.innerText = "⛏️ КОПАТЬ";
+                btn.style.opacity = "1";
+            }
+        }
+
+        function addLog(text) {
+            document.getElementById('log').innerText = text;
+        }
+
+        function mine() {
+            if (energy <= 0) {
+                addLog("Нет энергии! Купи эликсир или подожди.");
+                return;
+            }
+
+            energy--;
+            let chances = oreChances[pickLevel];
+            let rand = Math.random() * 100;
+            let oreName = "";
+            
+            if (rand < chances[0]) {
+                inventory.stone++;
+                oreName = "🗿 Камень";
+            } else if (rand < chances[0] + chances[1]) {
+                inventory.iron++;
+                oreName = "⚙️ Железо";
+            } else if (rand < chances[0] + chances[1] + chances[2]) {
+                inventory.gold++;
+                oreName = "🥇 Золото";
+            } else {
+                inventory.diamond++;
+                oreName = "💎 АЛМАЗ!";
+            }
+
+            addLog(`Добыто: ${oreName}!`);
+            updateUI();
+        }
+
+        function sellAll() {
+            let total = 0;
+            total += inventory.stone * 2;
+            total += inventory.iron * 8;
+            total += inventory.gold * 25;
+            total += inventory.diamond * 100;
+            
+            // Очищаем инвентарь
+            inventory.stone = 0;
+            inventory.iron = 0;
+            inventory.gold = 0;
+            inventory.diamond = 0;
+            
+            coins += total;
+            addLog(`Продано всё за ${total} монет!`);
+            updateUI();
+        }
+
+        function upgrade() {
+            let cost = 200;
+            if (pickLevel >= 5) {
+                addLog("Максимальный уровень кирки!");
+                return;
+            }
+            if (coins < cost) {
+                addLog(`Не хватает монет! Нужно ${cost}.`);
+                return;
+            }
+            
+            coins -= cost;
+            pickLevel++;
+            
+            const names = ["", "Деревянная", "Каменная", "Железная", "Золотая", "ЛАЗЕРНЫЙ БУР"];
+            pickName = names[pickLevel];
+            
+            addLog(`Улучшено до: ${pickName}!`);
+            updateUI();
+        }
+
+        function buyEnergy() {
+            if (coins < 50) {
+                addLog("Не хватает 50 монет на эликсир!");
+                return;
+            }
+            if (energy >= maxEnergy) {
+                addLog("Энергия полностью восстановлена!");
+                return;
+            }
+            coins -= 50;
+            energy = maxEnergy;
+            addLog("Энергия восстановлена!");
+            updateUI();
+        }
+
+        // Запуск интерфейса при загрузке
+        updateUI();
+    </script>
+</body>
+  </html>

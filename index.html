@@ -84,6 +84,11 @@
             color: #aaa;
             margin-top: 5px;
         }
+        .cost-info {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -110,6 +115,7 @@
     <button id="mineBtn" onclick="mine()">⛏️ КОПАТЬ</button>
 
     <button onclick="sellAll()">💰 Продать всё</button>
+    <div class="cost-info" id="pickUpgradeInfo"></div>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
     <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="upgradeEnergyCost">200</span> 🪙)</button>
@@ -143,7 +149,7 @@
             26: "Антиматериальная", 27: "Плазменный резец", 28: "Звёздный сплав", 29: "Чёрная дыра", 30: "Звездоруб"
         };
 
-        // Шансы [камень, железо, золото, алмаз] плавно улучшаются
+        // Шансы [камень, железо, золото, алмаз]
         function getOreChances(level) {
             if (level >= 30) return [0, 10, 40, 50];
             if (level >= 25) return [5, 15, 40, 40];
@@ -246,6 +252,15 @@
             document.getElementById('upgradeEnergyCost').innerText = energyUpgradeCost;
             document.getElementById('totalOreMined').innerText = totalOreMined;
 
+            // Стоимость улучшения кирки
+            const pickInfoEl = document.getElementById('pickUpgradeInfo');
+            if (pickLevel >= MAX_PICK_LEVEL) {
+                pickInfoEl.innerText = '🔨 Макс. уровень';
+            } else {
+                const cost = pickLevel * 300;
+                pickInfoEl.innerText = `🔨 Стоимость улучшения: ${cost} 🪙`;
+            }
+
             let btn = document.getElementById('mineBtn');
             if (energy <= 0) {
                 btn.innerText = "😴 НЕТ ЭНЕРГИИ";
@@ -306,7 +321,7 @@
 
         function upgradePick() {
             if (pickLevel >= MAX_PICK_LEVEL) { addLog("Максимальный уровень!"); return; }
-            let cost = pickLevel * 300;
+            const cost = pickLevel * 300;
             if (coins < cost) { addLog(`Не хватает монет! Нужно ${cost}.`); return; }
             coins -= cost;
             pickLevel++;

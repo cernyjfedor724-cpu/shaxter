@@ -89,11 +89,45 @@
             color: #aaa;
             margin-bottom: 5px;
         }
+        .id-badge {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .leaderboard {
+            margin-top: 15px;
+            background: #2a2a2a;
+            border-radius: 15px;
+            padding: 10px;
+        }
+        .leaderboard h3 {
+            margin: 5px 0;
+        }
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-bottom: 1px solid #444;
+            font-size: 14px;
+        }
+        .lb-row:last-child {
+            border-bottom: none;
+        }
+        .top-btn {
+            background-color: #4a4a4a;
+            width: 100%;
+        }
+        .credit {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
 
     <div class="stats">
+        <div class="id-badge">🆔 Твой ID: <span id="userID">загрузка...</span></div>
         <div>💰 Монеты: <span id="coins">150</span></div>
         <div>🔨 Кирка: <span id="pickaxeName">Каменная</span> (Ур. <span id="pickLevel">2</span>)</div>
         <div>⚡ Энергия: <span id="energy">20</span> / <span id="maxEnergy">20</span></div>
@@ -120,6 +154,7 @@
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
     <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="upgradeEnergyCost">200</span> 🪙)</button>
     <button onclick="showAchievements()">🏆 Достижения</button>
+    <button class="top-btn" onclick="loadLeaderboard()">🏆 Топ игроков</button>
 
     <div id="log">Нажми "Копать", чтобы начать!</div>
 
@@ -131,15 +166,28 @@
         <button onclick="hideAchievements()">Закрыть</button>
     </div>
 
+    <div id="leaderboardPanel" style="display: none;" class="leaderboard">
+        <h3>🏆 Топ шахтёров</h3>
+        <div id="lbList"></div>
+        <button onclick="hideLeaderboard()">Закрыть</button>
+    </div>
+
+    <div class="credit">Made by Fedor Chernyshev</div>
+
     <script>
         window.Telegram.WebApp.ready();
 
-        // ---------------------- Константы ----------------------
-        const RECOVERY_INTERVAL = 15 * 60; // 15 минут в секундах
+        let userID = "неизвестно";
+        if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            userID = window.Telegram.WebApp.initDataUnsafe.user.id;
+        }
+        document.getElementById('userID').innerText = userID;
+
+        const RECOVERY_INTERVAL = 15 * 60;
         const RECOVERY_AMOUNT = 1;
         const MAX_PICK_LEVEL = 30;
+        const SERVER_URL = "https://shaxter-top.onrender.com";
 
-        // Названия кирок 1-30
         const pickNames = {
             1: "Деревянная", 2: "Каменная", 3: "Железная", 4: "Золотая", 5: "Лазерный бур",
             6: "Мифриловая", 7: "Адамантитовая", 8: "Обсидиановая", 9: "Кристальная", 10: "Титановая",
@@ -149,7 +197,6 @@
             26: "Антиматериальная", 27: "Плазменный резец", 28: "Звёздный сплав", 29: "Чёрная дыра", 30: "Звездоруб"
         };
 
-        // Шансы [камень, железо, золото, алмаз]
         function getOreChances(level) {
             if (level >= 30) return [0, 10, 40, 50];
             if (level >= 25) return [5, 15, 40, 40];
@@ -160,7 +207,6 @@
             return [70 - level*5, 20 + level*3, 10 + level*2, 0 + level*1];
         }
 
-        // ---------------------- Сохранение ----------------------
         function loadGame() {
             const saved = localStorage.getItem('shakhter_save');
             if (saved) {
@@ -186,6 +232,7 @@
             pickName = pickNames[pickLevel];
             recoverEnergy();
             updateUI();
+            sendToServer();
         }
 
         function resetToDefault() {
@@ -211,6 +258,7 @@
                 totalOreMined
             };
             localStorage.setItem('shakhter_save', JSON.stringify(data));
+            sendToServer();
         }
 
         function recoverEnergy() {
@@ -231,13 +279,46 @@
             return RECOVERY_INTERVAL - (elapsed % RECOVERY_INTERVAL);
         }
 
-        // Глобальные переменные
+        function sendToServer() {
+            if (!userID || userID === "неизвестно") return;
+            fetch(`${SERVER_URL}/api/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userID, total_ore: totalOreMined })
+            }).catch(e => console.log('Ошибка связи с сервером'));
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const resp = await fetch(`${SERVER_URL}/api/top`);
+                const data = await resp.json();
+                const list = document.getElementById('lbList');
+                list.innerHTML = '';
+                data.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'lb-row';
+                    let idDisplay = player.user_id;
+                    if (idDisplay.length > 8) {
+                        idDisplay = idDisplay.substring(0, 6) + '...' + idDisplay.slice(-3);
+                    }
+                    div.innerHTML = `<span>#${index+1} ${idDisplay}</span> <span>${player.total_ore} руды</span>`;
+                    list.appendChild(div);
+                });
+                document.getElementById('leaderboardPanel').style.display = 'block';
+            } catch (e) {
+                document.getElementById('log').innerText = 'Не удалось загрузить топ';
+            }
+        }
+
+        function hideLeaderboard() {
+            document.getElementById('leaderboardPanel').style.display = 'none';
+        }
+
         let coins, energy, maxEnergy, pickLevel, pickName, totalStone, totalDiamondFound,
             energyUpgradeLevel, energyUpgradeCost, lastTimestamp, totalOreMined, inventory;
 
         loadGame();
 
-        // ---------------------- UI ----------------------
         function updateUI() {
             document.getElementById('coins').innerText = coins;
             document.getElementById('energy').innerText = energy;
@@ -252,7 +333,6 @@
             document.getElementById('upgradeEnergyCost').innerText = energyUpgradeCost;
             document.getElementById('totalOreMined').innerText = totalOreMined;
 
-            // Стоимость улучшения кирки
             const pickInfoEl = document.getElementById('pickUpgradeInfo');
             if (pickLevel >= MAX_PICK_LEVEL) {
                 pickInfoEl.innerText = '🔨 Макс. уровень';
@@ -293,7 +373,6 @@
             document.getElementById('log').innerText = text;
         }
 
-        // ---------------------- Действия ----------------------
         function mine() {
             if (energy <= 0) { addLog("Нет энергии!"); return; }
             energy--;

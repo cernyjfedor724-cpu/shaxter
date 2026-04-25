@@ -79,11 +79,15 @@
             border-left: 5px solid #666;
             color: #999;
         }
+        .timer {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Панель статистики -->
     <div class="stats">
         <div>💰 Монеты: <span id="coins">150</span></div>
         <div>🔨 Кирка: <span id="pickaxeName">Каменная</span> (Ур. <span id="pickLevel">2</span>)</div>
@@ -91,31 +95,28 @@
         <div class="energy-bar">
             <div class="energy-fill" id="energyFill" style="width: 100%;"></div>
         </div>
+        <div class="timer" id="regenTimer"></div>
+        <div>⛏️ Всего добыто руды: <span id="totalOreMined">0</span></div>
     </div>
 
-    <!-- Инвентарь -->
     <div class="stats">
-        <h3>🎒 Руда</h3>
+        <h3>🎒 Руда в инвентаре</h3>
         <div>🗿 Камень: <span id="stone">0</span></div>
         <div>⚙️ Железо: <span id="iron">0</span></div>
         <div>🥇 Золото: <span id="gold">0</span></div>
         <div>💎 Алмазы: <span id="diamond">0</span></div>
     </div>
 
-    <!-- Главная кнопка -->
     <button id="mineBtn" onclick="mine()">⛏️ КОПАТЬ</button>
 
-    <!-- Меню -->
     <button onclick="sellAll()">💰 Продать всё</button>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
     <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="upgradeEnergyCost">200</span> 🪙)</button>
     <button onclick="showAchievements()">🏆 Достижения</button>
 
-    <!-- Лог -->
     <div id="log">Нажми "Копать", чтобы начать!</div>
 
-    <!-- Достижения -->
     <div id="achievementsPanel" style="display: none;">
         <h3>🏆 Достижения</h3>
         <div id="ach1" class="achievement locked">🔒 Новичок — добыть 10 камней</div>
@@ -127,47 +128,123 @@
     <script>
         window.Telegram.WebApp.ready();
 
-        // Игровые переменные
-        let coins = 150;
-        let energy = 20;
-        let maxEnergy = 20;
-        let pickLevel = 2; // 1-дерево, 2-камень, 3-железо, 4-золото, 5-лазер, 6-эльф, 7-аметист
-        let pickName = "Каменная";
-        let totalStone = 0;
-        let totalDiamondFound = false;
-        let energyUpgradeLevel = 0; // сколько раз увеличивали макс. энергию
-        let energyUpgradeCost = 200; // базовая цена
+        // ---------------------- Константы ----------------------
+        const RECOVERY_INTERVAL = 15 * 60; // 15 минут в секундах
+        const RECOVERY_AMOUNT = 1;
+        const MAX_PICK_LEVEL = 30;
 
+        // Названия кирок 1-30
         const pickNames = {
-            1: "Деревянная", 2: "Каменная", 3: "Железная",
-            4: "Золотая", 5: "Лазерный бур", 6: "🌿 Эльфийская", 7: "🔮 Аметистовая"
+            1: "Деревянная", 2: "Каменная", 3: "Железная", 4: "Золотая", 5: "Лазерный бур",
+            6: "Мифриловая", 7: "Адамантитовая", 8: "Обсидиановая", 9: "Кристальная", 10: "Титановая",
+            11: "Эльфийская", 12: "Гномья сталь", 13: "Рунная", 14: "Призрачная", 15: "Драконья кость",
+            16: "Изумрудная", 17: "Сапфировая", 18: "Рубиновая", 19: "Алмазная", 20: "Космический бур",
+            21: "Хронокирка", 22: "Квантовая", 23: "Тёмная материя", 24: "Нейтронная", 25: "Гравитационный молот",
+            26: "Антиматериальная", 27: "Плазменный резец", 28: "Звёздный сплав", 29: "Чёрная дыра", 30: "Звездоруб"
         };
 
-        const oreChances = {
-            1: [70, 20, 10, 0],
-            2: [50, 30, 15, 5],
-            3: [30, 35, 25, 10],
-            4: [10, 30, 40, 20],
-            5: [0,  25, 45, 30],
-            6: [40, 30, 20, 10],
-            7: [30, 25, 30, 15]
-        };
+        // Шансы [камень, железо, золото, алмаз] плавно улучшаются
+        function getOreChances(level) {
+            if (level >= 30) return [0, 10, 40, 50];
+            if (level >= 25) return [5, 15, 40, 40];
+            if (level >= 20) return [10, 20, 35, 35];
+            if (level >= 15) return [20, 25, 30, 25];
+            if (level >= 10) return [30, 30, 25, 15];
+            if (level >= 5)  return [40, 35, 20, 5];
+            return [70 - level*5, 20 + level*3, 10 + level*2, 0 + level*1];
+        }
 
+        // ---------------------- Сохранение ----------------------
+        function loadGame() {
+            const saved = localStorage.getItem('shakhter_save');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    coins = data.coins ?? 150;
+                    energy = data.energy ?? 20;
+                    maxEnergy = data.maxEnergy ?? 20;
+                    pickLevel = data.pickLevel ?? 2;
+                    inventory = data.inventory ?? { stone: 0, iron: 0, gold: 0, diamond: 0 };
+                    totalStone = data.totalStone ?? 0;
+                    totalDiamondFound = data.totalDiamondFound ?? false;
+                    energyUpgradeLevel = data.energyUpgradeLevel ?? 0;
+                    energyUpgradeCost = data.energyUpgradeCost ?? 200;
+                    lastTimestamp = data.lastTimestamp ?? Date.now();
+                    totalOreMined = data.totalOreMined ?? 0;
+                } catch (e) {
+                    resetToDefault();
+                }
+            } else {
+                resetToDefault();
+            }
+            pickName = pickNames[pickLevel];
+            recoverEnergy();
+            updateUI();
+        }
+
+        function resetToDefault() {
+            coins = 150;
+            energy = 20;
+            maxEnergy = 20;
+            pickLevel = 2;
+            inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
+            totalStone = 0;
+            totalDiamondFound = false;
+            energyUpgradeLevel = 0;
+            energyUpgradeCost = 200;
+            lastTimestamp = Date.now();
+            totalOreMined = 0;
+        }
+
+        function saveGame() {
+            const data = {
+                coins, energy, maxEnergy, pickLevel,
+                inventory, totalStone, totalDiamondFound,
+                energyUpgradeLevel, energyUpgradeCost,
+                lastTimestamp: Date.now(),
+                totalOreMined
+            };
+            localStorage.setItem('shakhter_save', JSON.stringify(data));
+        }
+
+        function recoverEnergy() {
+            if (energy >= maxEnergy) { lastTimestamp = Date.now(); return; }
+            const now = Date.now();
+            const elapsed = Math.floor((now - lastTimestamp) / 1000);
+            if (elapsed >= RECOVERY_INTERVAL) {
+                const intervals = Math.floor(elapsed / RECOVERY_INTERVAL);
+                energy = Math.min(maxEnergy, energy + intervals * RECOVERY_AMOUNT);
+                lastTimestamp = now - ((elapsed % RECOVERY_INTERVAL) * 1000);
+            }
+        }
+
+        function getSecondsToNextEnergy() {
+            if (energy >= maxEnergy) return 0;
+            const now = Date.now();
+            const elapsed = Math.floor((now - lastTimestamp) / 1000);
+            return RECOVERY_INTERVAL - (elapsed % RECOVERY_INTERVAL);
+        }
+
+        // Глобальные переменные
+        let coins, energy, maxEnergy, pickLevel, pickName, totalStone, totalDiamondFound,
+            energyUpgradeLevel, energyUpgradeCost, lastTimestamp, totalOreMined, inventory;
+
+        loadGame();
+
+        // ---------------------- UI ----------------------
         function updateUI() {
             document.getElementById('coins').innerText = coins;
             document.getElementById('energy').innerText = energy;
             document.getElementById('maxEnergy').innerText = maxEnergy;
             document.getElementById('pickaxeName').innerText = pickName;
             document.getElementById('pickLevel').innerText = pickLevel;
-
             document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
-
             document.getElementById('stone').innerText = inventory.stone;
             document.getElementById('iron').innerText = inventory.iron;
             document.getElementById('gold').innerText = inventory.gold;
             document.getElementById('diamond').innerText = inventory.diamond;
-
             document.getElementById('upgradeEnergyCost').innerText = energyUpgradeCost;
+            document.getElementById('totalOreMined').innerText = totalOreMined;
 
             let btn = document.getElementById('mineBtn');
             if (energy <= 0) {
@@ -178,97 +255,95 @@
                 btn.style.opacity = "1";
             }
 
-            // Проверка достижений
-            if (totalStone >= 10) document.getElementById('ach1').className = "achievement unlocked"; else document.getElementById('ach1').className = "achievement locked";
-            if (totalDiamondFound) document.getElementById('ach2').className = "achievement unlocked"; else document.getElementById('ach2').className = "achievement locked";
-            if (coins >= 1000) document.getElementById('ach3').className = "achievement unlocked"; else document.getElementById('ach3').className = "achievement locked";
+            const sec = getSecondsToNextEnergy();
+            if (energy >= maxEnergy) {
+                document.getElementById('regenTimer').innerText = 'Энергия полная';
+            } else {
+                const min = Math.floor(sec / 60);
+                const s = sec % 60;
+                document.getElementById('regenTimer').innerText = `След. +1⚡ через ${min}м ${s}с`;
+            }
+
+            if (totalStone >= 10) document.getElementById('ach1').classList.add('unlocked');
+            else document.getElementById('ach1').classList.remove('unlocked');
+            if (totalDiamondFound) document.getElementById('ach2').classList.add('unlocked');
+            else document.getElementById('ach2').classList.remove('unlocked');
+            if (coins >= 1000) document.getElementById('ach3').classList.add('unlocked');
+            else document.getElementById('ach3').classList.remove('unlocked');
         }
 
-        let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
+        setInterval(updateUI, 1000);
 
         function addLog(text) {
             document.getElementById('log').innerText = text;
         }
 
+        // ---------------------- Действия ----------------------
         function mine() {
-            if (energy <= 0) {
-                addLog("Нет энергии! Купи эликсир или подожди.");
-                return;
-            }
+            if (energy <= 0) { addLog("Нет энергии!"); return; }
             energy--;
-            let chances = oreChances[pickLevel];
+            let chances = getOreChances(pickLevel);
             let rand = Math.random() * 100;
             let oreName = "";
-            if (rand < chances[0]) {
-                inventory.stone++; totalStone++; oreName = "🗿 Камень";
-            } else if (rand < chances[0] + chances[1]) {
-                inventory.iron++; oreName = "⚙️ Железо";
-            } else if (rand < chances[0] + chances[1] + chances[2]) {
-                inventory.gold++; oreName = "🥇 Золото";
-            } else {
-                inventory.diamond++; totalDiamondFound = true; oreName = "💎 АЛМАЗ!";
-            }
+            if (rand < chances[0]) { inventory.stone++; totalStone++; oreName = "🗿 Камень"; }
+            else if (rand < chances[0] + chances[1]) { inventory.iron++; oreName = "⚙️ Железо"; }
+            else if (rand < chances[0] + chances[1] + chances[2]) { inventory.gold++; oreName = "🥇 Золото"; }
+            else { inventory.diamond++; totalDiamondFound = true; oreName = "💎 АЛМАЗ!"; }
+            totalOreMined++;
             addLog(`Добыто: ${oreName}!`);
+            saveGame();
             updateUI();
         }
 
         function sellAll() {
             let total = inventory.stone * 2 + inventory.iron * 8 + inventory.gold * 25 + inventory.diamond * 100;
             coins += total;
-            inventory.stone = 0; inventory.iron = 0; inventory.gold = 0; inventory.diamond = 0;
+            inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
             addLog(`Продано всё за ${total} монет!`);
+            saveGame();
             updateUI();
         }
 
         function upgradePick() {
-            if (pickLevel >= 5) {
-                addLog("Максимальный уровень кирки (обычные). Секретные пока недоступны.");
-                return;
-            }
-            let cost = pickLevel * 200;
-            if (coins < cost) {
-                addLog(`Не хватает монет! Нужно ${cost}.`);
-                return;
-            }
+            if (pickLevel >= MAX_PICK_LEVEL) { addLog("Максимальный уровень!"); return; }
+            let cost = pickLevel * 300;
+            if (coins < cost) { addLog(`Не хватает монет! Нужно ${cost}.`); return; }
             coins -= cost;
             pickLevel++;
             pickName = pickNames[pickLevel];
-            addLog(`Улучшено до: ${pickName}!`);
+            addLog(`Кирка улучшена до: ${pickName}!`);
+            saveGame();
             updateUI();
         }
 
         function buyEnergy() {
-            if (coins < 50) { addLog("Не хватает 50 монет на эликсир!"); return; }
-            if (energy >= maxEnergy) { addLog("Энергия полностью восстановлена!"); return; }
+            if (coins < 50) { addLog("Не хватает монет!"); return; }
+            if (energy >= maxEnergy) { addLog("Энергия полна!"); return; }
             coins -= 50;
             energy = maxEnergy;
-            addLog("Энергия восстановлена!");
+            addLog("Энергия полностью восстановлена!");
+            saveGame();
             updateUI();
         }
 
         function upgradeMaxEnergy() {
-            if (coins < energyUpgradeCost) {
-                addLog(`Не хватает монет! Нужно ${energyUpgradeCost}.`);
-                return;
-            }
+            if (coins < energyUpgradeCost) { addLog(`Не хватает монет! Нужно ${energyUpgradeCost}.`); return; }
             coins -= energyUpgradeCost;
             energyUpgradeLevel++;
             maxEnergy += 2;
-            energy += 2; // даём сразу восполнение
-            energyUpgradeCost = 200 + energyUpgradeLevel * 100; // с каждым разом дороже
-            addLog(`Максимум энергии увеличен до ${maxEnergy}!`);
+            energy += 2;
+            energyUpgradeCost = 200 + energyUpgradeLevel * 100;
+            addLog(`Максимальная энергия увеличена до ${maxEnergy}!`);
+            saveGame();
             updateUI();
         }
 
         function showAchievements() {
             document.getElementById('achievementsPanel').style.display = 'block';
         }
-
         function hideAchievements() {
             document.getElementById('achievementsPanel').style.display = 'none';
         }
-
-        updateUI();
     </script>
 </body>
 </html>

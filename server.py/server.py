@@ -42,3 +42,6 @@ def update_score():
 
     save_leaderboard(leaderboard)
     return jsonify({"status": "ok", "total_ore": player["total_ore"]})
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

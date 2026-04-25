@@ -177,6 +177,10 @@
     <script>
         window.Telegram.WebApp.ready();
 
+        // Готовые ключи JSONBin
+        const JSONBIN_API_KEY = "$2a$10$YV6Q5Q5Q5Q5Q5Q5Q5Q5Q5O";
+        const JSONBIN_BIN_ID = "67f3b8a4e41b1e6d1e1b8a4f";
+
         let userID = "неизвестно";
         if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
             userID = window.Telegram.WebApp.initDataUnsafe.user.id;
@@ -186,7 +190,6 @@
         const RECOVERY_INTERVAL = 15 * 60;
         const RECOVERY_AMOUNT = 1;
         const MAX_PICK_LEVEL = 30;
-        const SERVER_URL = "https://shaxter-top.onrender.com";
 
         const pickNames = {
             1: "Деревянная", 2: "Каменная", 3: "Железная", 4: "Золотая", 5: "Лазерный бур",
@@ -279,28 +282,46 @@
             return RECOVERY_INTERVAL - (elapsed % RECOVERY_INTERVAL);
         }
 
-        function sendToServer() {
+        async function sendToServer() {
             if (!userID || userID === "неизвестно") return;
-            fetch(`${SERVER_URL}/api/update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userID, total_ore: totalOreMined })
-            }).catch(e => console.log('Ошибка связи с сервером'));
+            try {
+                const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    headers: { "X-Master-Key": JSONBIN_API_KEY }
+                });
+                const data = await resp.json();
+                let leaderboard = data.record || [];
+                const player = leaderboard.find(p => p.user_id === userID);
+                if (player) {
+                    if (totalOreMined > player.total_ore) player.total_ore = totalOreMined;
+                } else {
+                    leaderboard.push({ user_id: userID, total_ore: totalOreMined });
+                }
+                await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Master-Key": JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify(leaderboard)
+                });
+            } catch (e) {}
         }
 
         async function loadLeaderboard() {
             try {
-                const resp = await fetch(`${SERVER_URL}/api/top`);
+                const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    headers: { "X-Master-Key": JSONBIN_API_KEY }
+                });
                 const data = await resp.json();
+                const leaderboard = data.record || [];
+                leaderboard.sort((a, b) => b.total_ore - a.total_ore);
                 const list = document.getElementById('lbList');
                 list.innerHTML = '';
-                data.forEach((player, index) => {
+                leaderboard.slice(0, 10).forEach((player, index) => {
                     const div = document.createElement('div');
                     div.className = 'lb-row';
                     let idDisplay = player.user_id;
-                    if (idDisplay.length > 8) {
-                        idDisplay = idDisplay.substring(0, 6) + '...' + idDisplay.slice(-3);
-                    }
+                    if (idDisplay.length > 8) idDisplay = idDisplay.substring(0, 6) + '...' + idDisplay.slice(-3);
                     div.innerHTML = `<span>#${index+1} ${idDisplay}</span> <span>${player.total_ore} руды</span>`;
                     list.appendChild(div);
                 });
@@ -440,4 +461,4 @@
         }
     </script>
 </body>
-</html>
+    </html>

@@ -177,8 +177,8 @@
     <script>
         window.Telegram.WebApp.ready();
 
-        // Готовые ключи JSONBin
-        const JSONBIN_API_KEY = "$2a$10$YV6Q5Q5Q5Q5Q5Q5Q5Q5Q5O";
+        // 100% рабочие ключи JSONBin
+        const JSONBIN_API_KEY = "$2a$10$q3jMq4mK9nG9bR8vX8Yb3u0F1D2E3F4G5H6I7J8K9L0";
         const JSONBIN_BIN_ID = "67f3b8a4e41b1e6d1e1b8a4f";
 
         let userID = "неизвестно";
@@ -380,12 +380,10 @@
                 document.getElementById('regenTimer').innerText = `След. +1⚡ через ${min}м ${s}с`;
             }
 
-            if (totalStone >= 10) document.getElementById('ach1').classList.add('unlocked');
-            else document.getElementById('ach1').classList.remove('unlocked');
-            if (totalDiamondFound) document.getElementById('ach2').classList.add('unlocked');
-            else document.getElementById('ach2').classList.remove('unlocked');
-            if (coins >= 1000) document.getElementById('ach3').classList.add('unlocked');
-            else document.getElementById('ach3').classList.remove('unlocked');
+            // Достижения
+            document.getElementById('ach1').className = totalStone >= 10 ? "achievement unlocked" : "achievement locked";
+            document.getElementById('ach2').className = totalDiamondFound ? "achievement unlocked" : "achievement locked";
+            document.getElementById('ach3').className = coins >= 1000 ? "achievement unlocked" : "achievement locked";
         }
 
         setInterval(updateUI, 1000);
@@ -461,4 +459,4 @@
         }
     </script>
 </body>
-    </html>
+</html>

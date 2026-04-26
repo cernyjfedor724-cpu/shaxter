@@ -57,14 +57,29 @@
         .badge {
             font-size: 12px; color: #888;
         }
+        .achievement {
+            background: #333; border-radius: 8px; padding: 8px; margin: 5px 0; font-size: 14px;
+        }
+        .achievement.unlocked {
+            border-left: 5px solid #f1c40f; color: #f1c40f;
+        }
+        .achievement.locked {
+            border-left: 5px solid #666; color: #999;
+        }
+        .share-btn {
+            background: #2ecc71; width: 100%; margin-top: 10px;
+        }
+        .special-badge {
+            display: inline-block; background: #c4450c; border-radius: 4px; padding: 2px 6px; font-size: 10px; margin-left: 6px;
+        }
     </style>
 </head>
 <body>
 <div class="stats">
     <span class="badge" id="userIdDisplay"></span><br>
     💰 <span id="coins">150</span> 🪙<br>
-    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>)<br>
-    ⚡ <span id="energy">20</span>/<span id="maxEnergy">20</span>
+    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>) <span id="pickBonus" class="special-badge"></span><br>
+    ⚡ <span id="energy">20</span>/<span id="maxEnergy">20</span> (тратит <span id="energyCost">1</span> за удар)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
     <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
@@ -84,6 +99,7 @@
     <button id="tabMarket" onclick="switchTab('market')">📈 Рынок</button>
     <button id="tabShop" onclick="switchTab('shop')">🛒 Магазин</button>
     <button id="tabFortune" onclick="switchTab('fortune')">🎡 Фортуна</button>
+    <button id="tabAchieve" onclick="switchTab('achieve')">🏆</button>
     <button id="tabSettings" onclick="switchTab('settings')">⚙️</button>
 </div>
 
@@ -93,6 +109,7 @@
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
     <button onclick="sellAll()">💰 Продать всё</button>
     <button onclick="claimDaily()">🎁 Ежедневная награда</button>
+    <button class="share-btn" onclick="share()">📤 Поделиться</button>
 </div>
 
 <div id="panelMarket" class="panel hidden">
@@ -113,6 +130,15 @@
     <button onclick="spinWheel()">🎡 Крутить (100🪙)</button>
 </div>
 
+<div id="panelAchieve" class="panel hidden">
+    <h3>🏆 Достижения</h3>
+    <div id="ach1" class="achievement locked">🔒 Новичок — добыть 10 камней</div>
+    <div id="ach2" class="achievement locked">🔒 Счастливчик — найти алмаз</div>
+    <div id="ach3" class="achievement locked">🔒 Богач — накопить 1000 монет</div>
+    <div id="ach4" class="achievement locked">🔒 Мифриловый магнат — добыть 5 мифрила</div>
+    <div id="ach5" class="achievement locked">🔒 Энергетический кризис — потратить 1000 энергии</div>
+</div>
+
 <div id="panelSettings" class="panel hidden">
     <h3>⚙️ Настройки</h3>
     <button onclick="toggleTheme()">🌓 Сменить тему</button>
@@ -130,27 +156,79 @@
 
     // ---------- ЯЗЫКИ ----------
     const LANG = {
-        ru: { mine: '⛏️ Копать', noEnergy: '😴 Нет энергии', sell: '💰 Продать всё', upgrade: '🔨 Улучшить кирку', daily: '🎁 Ежедневная награда', logNoEnergy: 'Нет энергии!' },
-        en: { mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade', daily: '🎁 Daily gift', logNoEnergy: 'No energy!' }
+        ru: {
+            mine: '⛏️ Копать', noEnergy: '😴 Нет энергии', sell: '💰 Продать всё', upgrade: '🔨 Улучшить кирку',
+            daily: '🎁 Ежедневная награда', logNoEnergy: 'Нет энергии!', logMined: 'Добыто', logSold: 'Продано за',
+            buffOre: '💎 2x Руда активно', buffSell: '💵 2x Продажа активно', shareText: 'Я играю в "Шахтёра"! Добыл',
+            shareSuffix: 'руды киркой', tryYou: 'Попробуй и ты!', wheelPrize: '🎡 Выиграл: ',
+            dailyClaim: '🎁 Ежедневная награда: +50🪙 и полная энергия!', dailyWait: 'Награда доступна через',
+            marketTitle: '📈 Рыночные цены', shopTitle: '🛒 Баффы (монеты)', fortuneTitle: '🎡 Колесо фортуны',
+            settingsTitle: '⚙️ Настройки', achieveTitle: '🏆 Достижения', share: '📤 Поделиться',
+            maxLevel: 'Макс. уровень', upgradeCost: 'Стоимость улучшения: ', upgrade: '🔨 Улучшить кирку',
+            energyFull: 'Энергия полная', energyNext: 'След. +1⚡ через', vibrateMsg: 'Вибро!',
+            vibrateUnavailable: 'Вибрация не поддерживается'
+        },
+        en: {
+            mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade',
+            daily: '🎁 Daily gift', logNoEnergy: 'No energy!', logMined: 'Mined', logSold: 'Sold for',
+            buffOre: '💎 2x Ore active', buffSell: '💵 2x Sell active', shareText: 'I am playing "Miner"! Mined',
+            shareSuffix: 'ore with', tryYou: 'Try it too!', wheelPrize: '🎡 Won: ',
+            dailyClaim: '🎁 Daily reward: +50🪙 and full energy!', dailyWait: 'Reward available in',
+            marketTitle: '📈 Market Prices', shopTitle: '🛒 Buffs (coins)', fortuneTitle: '🎡 Wheel of Fortune',
+            settingsTitle: '⚙️ Settings', achieveTitle: '🏆 Achievements', share: '📤 Share',
+            maxLevel: 'Max level', upgradeCost: 'Upgrade cost: ', upgrade: '🔨 Upgrade pickaxe',
+            energyFull: 'Energy full', energyNext: 'Next +1⚡ in', vibrateMsg: 'Vibration!',
+            vibrateUnavailable: 'Vibration unavailable'
+        }
     };
     let lang = localStorage.getItem('lang') || 'ru';
 
     // ---------- БАЗОВЫЕ ПЕРЕМЕННЫЕ ----------
-    let coins = 150, energy = 20, maxEnergy = 20, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false;
+    let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false, totalMithril = 0, totalEnergySpent = 0;
     let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
-    let pickNames = {1:'Деревянная',2:'Каменная',3:'Железная',4:'Золотая',5:'Лазерный бур',6:'Мифриловая',7:'Адамантитовая',8:'Обсидиановая',9:'Кристальная',10:'Титановая',11:'Эльфийская',12:'Гномья сталь',13:'Рунная',14:'Призрачная',15:'Драконья кость',16:'Изумрудная',17:'Сапфировая',18:'Рубиновая',19:'Алмазная',20:'Космический бур',21:'Хронокирка',22:'Квантовая',23:'Тёмная материя',24:'Нейтронная',25:'Гравитационный молот',26:'Антиматериальная',27:'Плазменный резец',28:'Звёздный сплав',29:'Чёрная дыра',30:'Звездоруб'};
     let lastTimestamp = Date.now();
-    let upgradeCost = 200;
     let buffDoubleOre = false, buffDoubleOreEnd = 0;
     let buffDoubleSell = false, buffDoubleSellEnd = 0;
     let lastDaily = localStorage.getItem('lastDaily') ? Number(localStorage.getItem('lastDaily')) : 0;
-
-    // цены рынка
     let market = { stone: 2, iron: 8, gold: 25, diamond: 100, mithril: 50 };
 
-    // ---------- ФУНКЦИИ ----------
+    // ---------- КИРКИ (100 штук) ----------
+    const PICKAXES = [];
+    for (let i = 1; i <= 100; i++) {
+        let energyCost = Math.min(10, Math.floor(i / 10) + 1); // растёт от 1 до 10
+        let multiChance = Math.min(0.9, (i - 1) * 0.01); // шанс множителя (до 90%)
+        let maxMulti = 2; // базовый множитель x2
+        if (i >= 30) maxMulti = 3;
+        if (i >= 60) maxMulti = 5;
+        if (i >= 90) maxMulti = 10;
+        let bonus = '';
+        if (i === 10) bonus = 'Редкий самоцвет';
+        if (i === 25) bonus = 'Энергоотдача (+5 макс. энергии)';
+        if (i === 50) bonus = 'Золотая лихорадка (временно 3x рынок)';
+        if (i === 75) bonus = 'Кротовый нюх (шанс найти мифрил x2)';
+        if (i === 100) bonus = 'Чёрная дыра (поглощает всю руду и даёт x10 монет)';
+        let names = [
+            'Деревянная', 'Каменная', 'Железная', 'Золотая', 'Лазерный бур',
+            'Мифриловая', 'Адамантитовая', 'Обсидиановая', 'Кристальная', 'Титановая',
+            'Эльфийская', 'Гномья сталь', 'Рунная', 'Призрачная', 'Драконья кость',
+            'Изумрудная', 'Сапфировая', 'Рубиновая', 'Алмазная', 'Космический бур',
+            'Хронокирка', 'Квантовая', 'Тёмная материя', 'Нейтронная', 'Гравитационный молот',
+            'Антиматериальная', 'Плазменный резец', 'Звёздный сплав', 'Чёрная дыра'
+        ];
+        let name = names[Math.min(i-1, names.length-1)] + (i > names.length ? ` ${i}` : '');
+        PICKAXES.push({
+            level: i,
+            name: name,
+            energyCost: energyCost,
+            multiChance: multiChance,
+            maxMulti: maxMulti,
+            bonus: bonus
+        });
+    }
+
+    // ---------- ФУНКЦИИ СОХРАНЕНИЯ ----------
     function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, inventory, upgradeCost, lastTimestamp: Date.now() };
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, inventory, lastTimestamp: Date.now() };
         localStorage.setItem('shakhter_save', JSON.stringify(data));
     }
 
@@ -159,16 +237,12 @@
         if (saved) {
             try {
                 let d = JSON.parse(saved);
-                coins = d.coins ?? 150;
-                if (isNaN(coins)) coins = 150;
-                energy = d.energy ?? 20;
-                maxEnergy = d.maxEnergy ?? 20;
-                pickLevel = d.pickLevel ?? 2;
-                totalOre = d.totalOre ?? 0;
-                totalStone = d.totalStone || 0;
-                totalDiamondFound = d.totalDiamondFound || false;
+                coins = d.coins ?? 150; if (isNaN(coins)) coins = 150;
+                energy = d.energy ?? 100; maxEnergy = d.maxEnergy ?? 100;
+                pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
+                totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
+                totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-                upgradeCost = d.upgradeCost || 200;
                 lastTimestamp = d.lastTimestamp || Date.now();
             } catch(e) { resetGame(); }
         } else { resetGame(); }
@@ -177,15 +251,15 @@
     }
 
     function resetGame() {
-        coins = 150; energy = 20; maxEnergy = 20; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false;
+        coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-        upgradeCost = 200; lastTimestamp = Date.now();
+        lastTimestamp = Date.now();
     }
 
     function recoverEnergy() {
         let now = Date.now();
         let diff = Math.floor((now - lastTimestamp) / 1000);
-        let gained = Math.floor(diff / 900); // 15 мин
+        let gained = Math.floor(diff / 900);
         if (gained > 0) {
             energy = Math.min(maxEnergy, energy + gained);
             lastTimestamp = now - (diff % 900) * 1000;
@@ -193,14 +267,14 @@
     }
 
     function updateUI() {
-        // защита от NaN
         if (isNaN(coins)) coins = 150;
-
+        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
         document.getElementById('coins').innerText = coins;
         document.getElementById('energy').innerText = energy;
         document.getElementById('maxEnergy').innerText = maxEnergy;
-        document.getElementById('pickName').innerText = pickNames[pickLevel];
-        document.getElementById('pickLevel').innerText = pickLevel;
+        document.getElementById('pickName').innerText = pick.name;
+        document.getElementById('pickLevel').innerText = pick.level;
+        document.getElementById('energyCost').innerText = pick.energyCost;
         document.getElementById('totalOre').innerText = totalOre;
         document.getElementById('stone').innerText = inventory.stone;
         document.getElementById('iron').innerText = inventory.iron;
@@ -208,10 +282,11 @@
         document.getElementById('diamond').innerText = inventory.diamond;
         document.getElementById('mithril').innerText = inventory.mithril;
         document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
-        document.getElementById('pickUpgradeCost').innerText = pickLevel >= 30 ? 'Макс. уровень' : 'Стоимость улучшения: ' + (pickLevel * 300) + ' 🪙';
+        document.getElementById('pickUpgradeCost').innerText = pickLevel >= 100 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
+        document.getElementById('pickBonus').innerText = pick.bonus ? pick.bonus : '';
 
         let btn = document.getElementById('mineBtn');
-        if (energy <= 0) {
+        if (energy < pick.energyCost) {
             btn.innerText = LANG[lang].noEnergy;
             btn.style.opacity = '0.6';
         } else {
@@ -219,15 +294,20 @@
             btn.style.opacity = '1';
         }
 
-        // таймер восстановления
         let sec = getSecondsToNext();
         let min = Math.floor(sec / 60), s = sec % 60;
-        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? 'Энергия полная' : `След. +1⚡ через ${min}м ${s}с`;
+        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? LANG[lang].energyFull : LANG[lang].energyNext + ` ${min}м ${s}с`;
 
-        // ID пользователя
         if (window.Telegram.WebApp.initDataUnsafe?.user) {
             document.getElementById('userIdDisplay').innerText = 'ID: ' + window.Telegram.WebApp.initDataUnsafe.user.id;
         }
+
+        // достижения
+        document.getElementById('ach1').className = totalStone >= 10 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach2').className = totalDiamondFound ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach3').className = coins >= 1000 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach4').className = totalMithril >= 5 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach5').className = totalEnergySpent >= 1000 ? 'achievement unlocked' : 'achievement locked';
     }
 
     function getSecondsToNext() {
@@ -243,56 +323,76 @@
 
     // ---------- ТАБЫ ----------
     function switchTab(tab) {
-        document.getElementById('panelMine').classList.toggle('hidden', tab !== 'mine');
-        document.getElementById('panelMarket').classList.toggle('hidden', tab !== 'market');
-        document.getElementById('panelShop').classList.toggle('hidden', tab !== 'shop');
-        document.getElementById('panelFortune').classList.toggle('hidden', tab !== 'fortune');
-        document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
-        ['tabMine','tabMarket','tabShop','tabFortune','tabSettings'].forEach(id => document.getElementById(id).classList.remove('tab-active'));
+        let tabs = ['mine','market','shop','fortune','achieve','settings'];
+        tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
+        tabs.forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('tab-active'));
         document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
         if (tab === 'market') updateMarketDisplay();
     }
 
     // ---------- ИГРОВЫЕ ДЕЙСТВИЯ ----------
     function getOreChances(lvl) {
-        let base = [70 - lvl*5, 20 + lvl*3, 10 + lvl*2, 0 + lvl*1, 0];
-        if (lvl >= 5) base = [40, 35, 20, 5, 0];
-        if (lvl >= 10) base = [30, 30, 25, 10, 5];
-        if (lvl >= 15) base = [20, 25, 30, 15, 10];
-        if (lvl >= 20) base = [10, 20, 35, 25, 10];
-        if (lvl >= 25) base = [5, 15, 40, 30, 10];
+        let base = [70 - lvl*0.5, 20 + lvl*0.3, 10 + lvl*0.2, 0 + lvl*0.1, 0];
+        if (lvl >= 20) base = [50, 25, 15, 7, 3];
+        if (lvl >= 40) base = [40, 25, 20, 10, 5];
+        if (lvl >= 60) base = [30, 25, 25, 15, 5];
+        if (lvl >= 80) base = [20, 25, 30, 20, 5];
+        if (lvl >= 95) base = [10, 25, 35, 25, 5];
         return base; // stone, iron, gold, diamond, mithril
     }
 
     function mine() {
-        if (energy <= 0) { addLog(LANG[lang].logNoEnergy); return; }
-        energy--;
+        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
+        if (energy < pick.energyCost) { addLog(LANG[lang].logNoEnergy); return; }
+        energy -= pick.energyCost;
+        totalEnergySpent += pick.energyCost;
         let chances = getOreChances(pickLevel);
         let r = Math.random() * 100;
         let count = buffDoubleOre ? 2 : 1;
+        // множитель кирки
+        let pickMultiplier = 1;
+        if (Math.random() < pick.multiChance) {
+            pickMultiplier = Math.floor(Math.random() * pick.maxMulti) + 1;
+        }
+        count *= pickMultiplier;
         let ore = '';
         if (r < chances[0]) { inventory.stone += count; totalStone += count; ore = '🗿 Камень'; }
         else if (r < chances[0]+chances[1]) { inventory.iron += count; ore = '⚙️ Железо'; }
         else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; ore = '🥇 Золото'; }
         else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
-        else { inventory.mithril += count; ore = '💠 Мифрил'; }
+        else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
-        if (navigator.vibrate) navigator.vibrate(30);
-        addLog(`Добыто ${ore} x${count}`);
+        // особые бонусы кирок
+        if (pick.bonus === 'Энергоотдача (+5 макс. энергии)' && !PICKAXES[25].applied) {
+            maxEnergy += 5;
+            PICKAXES[25].applied = true;
+        }
+        if (pick.bonus === 'Золотая лихорадка (временно 3x рынок)' && Math.random() < 0.1) {
+            buffDoubleSell = true; buffDoubleSellEnd = Date.now() + 30000;
+            addLog('🔥 Золотая лихорадка! 3x продажа на 30с!');
+        }
+        // вибрация
+        try {
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate(35 * count);
+            }
+        } catch (e) {}
+        addLog(`${LANG[lang].logMined} ${ore} x${count} (энергии потрачено: ${pick.energyCost})`);
         saveGame(); updateUI();
     }
 
     function sellAll() {
         let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
-        if (buffDoubleSell) total *= 2;
+        if (buffDoubleSell) total *= 3; // бафф 3x
         coins += total;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-        addLog(`Продано за ${total} 🪙`);
+        addLog(`${LANG[lang].logSold} ${total} 🪙`);
         saveGame(); updateUI();
+        buffDoubleSell = false; // одноразовый бафф
     }
 
     function upgradePick() {
-        if (pickLevel >= 30) { addLog('Макс. уровень!'); return; }
+        if (pickLevel >= 100) { addLog(LANG[lang].maxLevel); return; }
         let cost = pickLevel * 300;
         if (coins < cost) { addLog('Не хватает монет!'); return; }
         coins -= cost;
@@ -323,8 +423,8 @@
     function showActiveBuffs() {
         let el = document.getElementById('activeBuffs');
         let text = '';
-        if (buffDoubleOre) text += '💎 2x Руда активно<br>';
-        if (buffDoubleSell) text += '💵 2x Продажа активно<br>';
+        if (buffDoubleOre) text += LANG[lang].buffOre + '<br>';
+        if (buffDoubleSell) text += LANG[lang].buffSell + '<br>';
         el.innerHTML = text || 'Нет активных баффов';
     }
 
@@ -343,7 +443,7 @@
             market[ore] = Math.max(1, Math.round(market[ore] * (1 + change)));
         }
         updateMarketDisplay();
-    }, 600000); // каждые 10 минут
+    }, 600000);
 
     // ---------- КОЛЕСО ФОРТУНЫ ----------
     function spinWheel() {
@@ -356,7 +456,7 @@
         if (prize === 'x2 Руда 15с') { buffDoubleOre = true; buffDoubleOreEnd = Date.now() + 15000; }
         if (prize === 'Алмаз в инвентарь') { inventory.diamond++; totalDiamondFound = true; }
         if (prize === 'Мифрил') inventory.mithril++;
-        addLog('🎡 Выиграл: ' + prize);
+        addLog(LANG[lang].wheelPrize + prize);
         saveGame(); updateUI();
     }
 
@@ -365,12 +465,12 @@
         let now = Date.now();
         if (now - lastDaily < 86400000) {
             let left = Math.ceil((86400000 - (now - lastDaily)) / 3600000);
-            addLog(`Награда доступна через ${left} ч.`);
+            addLog(`${LANG[lang].dailyWait} ${left} ч.`);
             return;
         }
         coins += 50; energy = maxEnergy;
         lastDaily = now; localStorage.setItem('lastDaily', lastDaily);
-        addLog('🎁 Ежедневная награда: +50🪙 и полная энергия!');
+        addLog(LANG[lang].dailyClaim);
         saveGame(); updateUI();
     }
 
@@ -385,13 +485,24 @@
         updateUI();
     }
     function testVibration() {
-        if (navigator.vibrate) { navigator.vibrate(300); addLog('Вибро!'); }
-        else addLog('Вибрация не поддерживается');
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(300);
+            addLog(LANG[lang].vibrateMsg);
+        } else {
+            addLog(LANG[lang].vibrateUnavailable);
+        }
     }
     function resetProgress() {
         if (!confirm('Точно удалить весь прогресс?')) return;
         localStorage.removeItem('shakhter_save');
         resetGame(); updateUI();
+    }
+
+    // ---------- ШАРИНГ ----------
+    function share() {
+        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
+        let text = `${LANG[lang].shareText} ${totalOre} ${LANG[lang].shareSuffix} "${pick.name}". ${LANG[lang].tryYou}`;
+        navigator.clipboard.writeText(text).then(() => addLog('Текст скопирован!'));
     }
 
     // ---------- ИНИЦИАЛИЗАЦИЯ ----------

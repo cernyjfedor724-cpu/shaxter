@@ -81,6 +81,12 @@
         .pet-card button {
             width: auto; margin: 5px 3px 0 0;
         }
+        .invest-input {
+            width: 80%; padding: 10px; margin: 5px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-size: 16px;
+        }
+        body.light .invest-input {
+            background: #fff; color: #222; border-color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -485,12 +491,13 @@
         // бонус Пупуни (+5% к редкой руде за каждый уровень)
         if (pets.pet2.owned && pets.pet2.level > 0) {
             let bonus = pets.pet2.level * 5;
-            base[3] += bonus; // diamond
-            base[4] += bonus; // mithril
+            base[3] += bonus;
+            base[4] += bonus;
         }
         return base;
     }
 
+    // ГАРАНТИРОВАННО РАБОТАЮЩАЯ ФУНКЦИЯ КОПКИ
     function mine() {
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
         if (energy < pick.energyCost) { addLog(LANG[lang].logNoEnergy); return; }
@@ -504,13 +511,12 @@
             pickMultiplier = Math.floor(Math.random() * pick.maxMulti) + 1;
         }
         count *= pickMultiplier;
-        let oreType = '';
-        let oreDisplay = '';
-        if (r < chances[0]) { inventory.stone += count; totalStone += count; oreType = 'stone'; oreDisplay = '🗿 Камень'; }
-        else if (r < chances[0]+chances[1]) { inventory.iron += count; oreType = 'iron'; oreDisplay = '⚙️ Железо'; }
-        else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; oreType = 'gold'; oreDisplay = '🥇 Золото'; }
-        else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; oreType = 'diamond'; oreDisplay = '💎 Алмаз'; }
-        else { inventory.mithril += count; totalMithril += count; oreType = 'mithril'; oreDisplay = '💠 Мифрил'; }
+        let ore = '';
+        if (r < chances[0]) { inventory.stone += count; totalStone += count; ore = '🗿 Камень'; }
+        else if (r < chances[0]+chances[1]) { inventory.iron += count; ore = '⚙️ Железо'; }
+        else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; ore = '🥇 Золото'; }
+        else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
+        else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
         if (pick.bonus === 'Энергоотдача (+5 макс. энергии)' && !PICKAXES[25].applied) {
             maxEnergy += 5;
@@ -520,12 +526,8 @@
             buffDoubleSell = true; buffDoubleSellEnd = Date.now() + 30000;
             addLog('🔥 Золотая лихорадка! 3x продажа на 30с!');
         }
-        try {
-            if (window.navigator && window.navigator.vibrate) {
-                window.navigator.vibrate(35 * count);
-            }
-        } catch (e) {}
-        addLog(`${LANG[lang].logMined} ${oreDisplay} x${count} (энергии потрачено: ${pick.energyCost})`);
+        try { if (window.navigator?.vibrate) navigator.vibrate(35 * count); } catch(e) {}
+        addLog(`${LANG[lang].logMined} ${ore} x${count}`);
         saveGame(); updateUI();
     }
 
@@ -545,7 +547,6 @@
         if (coins < cost) { addLog('Не хватает монет!'); return; }
         coins -= cost;
         pickLevel++;
-        addLog(`Кирка улучшена до ${pickLevel} уровня!`);
         saveGame(); updateUI();
     }
 
@@ -576,9 +577,8 @@
         if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
         if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
         showActiveBuffs();
-        // Пассивный доход питомца "Белый чай"
         if (pets.pet1.owned && pets.pet1.level > 0) {
-            let interval = 10000; // 10 секунд
+            let interval = 10000;
             if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
             if (now - pets.pet1.lastPaid >= interval) {
                 coins += 1 * pets.pet1.level;
@@ -727,4 +727,4 @@
     }, 1000);
 </script>
 </body>
-    </html>
+</html>

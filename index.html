@@ -81,15 +81,6 @@
         .pet-card button {
             width: auto; margin: 5px 3px 0 0;
         }
-        .quest-card {
-            background: #333; border-radius: 12px; padding: 12px; margin: 8px 0; text-align: left;
-        }
-        body.light .quest-card {
-            background: #eee; color: #222;
-        }
-        .quest-card button {
-            width: auto; margin: 8px 0 0 0;
-        }
     </style>
 </head>
 <body>
@@ -119,7 +110,6 @@
     <button id="tabFortune" onclick="switchTab('fortune')">🎡 <span id="tabFortuneName">Азарт</span></button>
     <button id="tabAchieve" onclick="switchTab('achieve')">🏆 <span id="tabAchieveName">Достижения</span></button>
     <button id="tabPets" onclick="switchTab('pets')">🐾 <span id="tabPetsName">Питомцы</span></button>
-    <button id="tabQuests" onclick="switchTab('quests')">📋 <span id="tabQuestsName">Квесты</span></button>
     <button id="tabSettings" onclick="switchTab('settings')">⚙️ <span id="tabSettingsName">Настройки</span></button>
 </div>
 
@@ -181,16 +171,6 @@
     <p style="color:#aaa; font-size:12px;"><span id="petNote">Питомцы действуют постоянно после покупки</span></p>
 </div>
 
-<div id="panelQuests" class="panel hidden">
-    <h3 id="questsTitle">📋 Ежедневные квесты</h3>
-    <div class="quest-card" id="questCard">
-        <div id="questDesc"></div>
-        <div style="font-size:14px; margin-top:5px;"><span id="questProgress"></span></div>
-        <button id="questClaimBtn" class="hidden" onclick="claimQuestReward()">Забрать награду</button>
-    </div>
-    <p style="color:#aaa; font-size:12px;"><span id="questNote">Квесты обновляются каждый день</span></p>
-</div>
-
 <div id="panelSettings" class="panel hidden">
     <h3 id="settingsTitle">⚙️ Настройки</h3>
     <button onclick="toggleTheme()">🌓 <span id="themeBtn">Сменить тему</span></button>
@@ -230,16 +210,10 @@
             inventoryTitle: '🎒 Инвентарь',
             stoneName: 'Камень', ironName: 'Железо', goldName: 'Золото', diamondName: 'Алмазы', mithrilName: 'Мифрил',
             tabMineName: 'Шахта', tabMarketName: 'Рынок', tabShopName: 'Магазин', tabFortuneName: 'Азарт',
-            tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabQuestsName: 'Квесты', tabSettingsName: 'Настройки',
+            tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabSettingsName: 'Настройки',
             ach1Text: 'Новичок — добыть 10 камней', ach2Text: 'Счастливчик — найти алмаз',
             ach3Text: 'Богач — накопить 1000 монет', ach4Text: 'Мифриловый магнат — добыть 5 мифрила',
-            ach5Text: 'Энергетический кризис — потратить 1000 энергии',
-            questsTitle: '📋 Ежедневные квесты',
-            questNote: 'Квесты обновляются каждый день',
-            questClaim: 'Забрать награду',
-            questReward: 'Награда: ',
-            questComplete: 'Квест выполнен!',
-            questReset: 'Квест обновится через ',
+            ach5Text: 'Энергетический кризис — потратить 1000 энергии'
         },
         en: {
             mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade',
@@ -263,16 +237,10 @@
             inventoryTitle: '🎒 Inventory',
             stoneName: 'Stone', ironName: 'Iron', goldName: 'Gold', diamondName: 'Diamonds', mithrilName: 'Mithril',
             tabMineName: 'Mine', tabMarketName: 'Market', tabShopName: 'Shop', tabFortuneName: 'Gamble',
-            tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabQuestsName: 'Quests', tabSettingsName: 'Settings',
+            tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabSettingsName: 'Settings',
             ach1Text: 'Beginner — mine 10 stones', ach2Text: 'Lucky — find a diamond',
             ach3Text: 'Rich — accumulate 1000 coins', ach4Text: 'Mithril Tycoon — mine 5 mithril',
-            ach5Text: 'Energy Crisis — spend 1000 energy',
-            questsTitle: '📋 Daily Quests',
-            questNote: 'Quests refresh every day',
-            questClaim: 'Claim reward',
-            questReward: 'Reward: ',
-            questComplete: 'Quest completed!',
-            questReset: 'Quest resets in ',
+            ach5Text: 'Energy Crisis — spend 1000 energy'
         }
     };
     let lang = localStorage.getItem('lang') || 'ru';
@@ -290,16 +258,6 @@
     let pets = {
         pet1: { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0, nameKey: 'pet1Name', descKey: 'pet1Desc' },
         pet2: { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0, nameKey: 'pet2Name', descKey: 'pet2Desc' }
-    };
-
-    // Ежедневный квест
-    let dailyQuest = {
-        type: '',       // 'ore', 'sell', 'upgrade'
-        target: 0,
-        progress: 0,
-        reward: 0,
-        completed: false,
-        lastReset: null
     };
 
     // ---------- КИРКИ (100 штук) ----------
@@ -338,7 +296,7 @@
 
     // ---------- ФУНКЦИИ СОХРАНЕНИЯ ----------
     function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, inventory, lastTimestamp: Date.now(), pets, dailyQuest };
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, inventory, lastTimestamp: Date.now(), pets };
         localStorage.setItem('shakhter_save', JSON.stringify(data));
     }
 
@@ -358,8 +316,6 @@
                     pets.pet1 = d.pets.pet1 || pets.pet1;
                     pets.pet2 = d.pets.pet2 || pets.pet2;
                 }
-                dailyQuest = d.dailyQuest || dailyQuest;
-                resetDailyQuestIfNeeded();
             } catch(e) { resetGame(); }
         } else { resetGame(); }
         recoverEnergy();
@@ -372,141 +328,8 @@
         lastTimestamp = Date.now();
         pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0 };
         pets.pet2 = { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0 };
-        generateDailyQuest();
     }
 
-    // ---------- ЕЖЕДНЕВНЫЙ КВЕСТ ----------
-    function resetDailyQuestIfNeeded() {
-        if (!dailyQuest.lastReset || (Date.now() - dailyQuest.lastReset) > 24 * 60 * 60 * 1000) {
-            generateDailyQuest();
-            dailyQuest.lastReset = Date.now();
-            dailyQuest.completed = false;
-            dailyQuest.progress = 0;
-            saveGame();
-        }
-    }
-
-    function generateDailyQuest() {
-        const questTypes = [
-            { type: 'ore', ore: 'diamond', name: 'Алмазы', target: () => Math.floor(Math.random() * 5) + 3, reward: () => 10000 },
-            { type: 'ore', ore: 'stone', name: 'Камни', target: () => Math.floor(Math.random() * 20) + 10, reward: () => 2000 },
-            { type: 'ore', ore: 'iron', name: 'Железо', target: () => Math.floor(Math.random() * 15) + 5, reward: () => 3000 },
-            { type: 'ore', ore: 'gold', name: 'Золото', target: () => Math.floor(Math.random() * 10) + 5, reward: () => 5000 },
-            { type: 'ore', ore: 'mithril', name: 'Мифрил', target: () => Math.floor(Math.random() * 3) + 2, reward: () => 15000 },
-            { type: 'sell', target: () => Math.floor(Math.random() * 500) + 500, reward: () => 8000 },
-            { type: 'upgrade', target: () => Math.floor(Math.random() * 3) + 1, reward: () => 12000 },
-        ];
-        let chosen = questTypes[Math.floor(Math.random() * questTypes.length)];
-        dailyQuest.type = chosen.type;
-        dailyQuest.target = chosen.target();
-        dailyQuest.reward = chosen.reward();
-        dailyQuest.progress = 0;
-        dailyQuest.completed = false;
-        if (chosen.ore) dailyQuest.ore = chosen.ore;
-    }
-
-    function updateQuestProgress() {
-        if (!dailyQuest || dailyQuest.completed) return;
-        let progress = 0;
-        switch (dailyQuest.type) {
-            case 'ore':
-                progress = inventory[dailyQuest.ore] || 0;
-                break;
-            case 'sell':
-                break;
-            case 'upgrade':
-                break;
-        }
-        if (progress >= dailyQuest.target) {
-            dailyQuest.progress = dailyQuest.target;
-            dailyQuest.completed = true;
-            document.getElementById('questClaimBtn').classList.remove('hidden');
-            addLog(LANG[lang].questComplete);
-        } else {
-            dailyQuest.progress = progress;
-        }
-        updateQuestUI();
-    }
-
-    function updateQuestUI() {
-        let desc = '';
-        let progressText = '';
-        if (dailyQuest.type === 'ore') {
-            let oreName = LANG[lang][dailyQuest.ore + 'Name'] || dailyQuest.ore;
-            desc = `Добудьте ${dailyQuest.target} ${oreName}`;
-            progressText = `Прогресс: ${dailyQuest.progress}/${dailyQuest.target}`;
-        } else if (dailyQuest.type === 'sell') {
-            desc = `Продайте руды на сумму ${dailyQuest.target} монет`;
-            progressText = `Прогресс: ${dailyQuest.progress}/${dailyQuest.target} 🪙`;
-        } else if (dailyQuest.type === 'upgrade') {
-            desc = `Улучшите кирку ${dailyQuest.target} раз(а)`;
-            progressText = `Прогресс: ${dailyQuest.progress}/${dailyQuest.target}`;
-        }
-        document.getElementById('questDesc').innerText = desc + ' | ' + LANG[lang].questReward + dailyQuest.reward + ' 🪙';
-        document.getElementById('questProgress').innerText = progressText;
-        if (dailyQuest.completed) {
-            document.getElementById('questClaimBtn').classList.remove('hidden');
-            document.getElementById('questClaimBtn').innerText = LANG[lang].questClaim;
-        } else {
-            document.getElementById('questClaimBtn').classList.add('hidden');
-        }
-    }
-
-    function claimQuestReward() {
-        if (!dailyQuest.completed) return;
-        coins += dailyQuest.reward;
-        addLog(`Получено ${dailyQuest.reward} монет за квест!`);
-        dailyQuest.completed = false;
-        dailyQuest.progress = 0;
-        saveGame();
-        updateUI();
-        updateQuestUI();
-    }
-
-    // ---------- ФУНКЦИИ ДЛЯ ОТСЛЕЖИВАНИЯ ПРОГРЕССА (временно отключены) ----------
-    function onMine(oreType) {
-        // Закомментировано для проверки
-        // if (dailyQuest.type === 'ore' && dailyQuest.ore === oreType && !dailyQuest.completed) {
-        //     dailyQuest.progress = Math.min(dailyQuest.target, (dailyQuest.progress || 0) + 1);
-        //     if (dailyQuest.progress >= dailyQuest.target) {
-        //         dailyQuest.completed = true;
-        //         document.getElementById('questClaimBtn').classList.remove('hidden');
-        //         addLog(LANG[lang].questComplete);
-        //     }
-        //     updateQuestUI();
-        //     saveGame();
-        // }
-    }
-
-    function onSell(total) {
-        // Закомментировано для проверки
-        // if (dailyQuest.type === 'sell' && !dailyQuest.completed) {
-        //     dailyQuest.progress = Math.min(dailyQuest.target, (dailyQuest.progress || 0) + total);
-        //     if (dailyQuest.progress >= dailyQuest.target) {
-        //         dailyQuest.completed = true;
-        //         document.getElementById('questClaimBtn').classList.remove('hidden');
-        //         addLog(LANG[lang].questComplete);
-        //     }
-        //     updateQuestUI();
-        //     saveGame();
-        // }
-    }
-
-    function onUpgrade() {
-        // Закомментировано для проверки
-        // if (dailyQuest.type === 'upgrade' && !dailyQuest.completed) {
-        //     dailyQuest.progress = Math.min(dailyQuest.target, (dailyQuest.progress || 0) + 1);
-        //     if (dailyQuest.progress >= dailyQuest.target) {
-        //         dailyQuest.completed = true;
-        //         document.getElementById('questClaimBtn').classList.remove('hidden');
-        //         addLog(LANG[lang].questComplete);
-        //     }
-        //     updateQuestUI();
-        //     saveGame();
-        // }
-    }
-
-    // ---------- ФУНКЦИИ ДЕЙСТВИЙ ----------
     function recoverEnergy() {
         let now = Date.now();
         let diff = Math.floor((now - lastTimestamp) / 1000);
@@ -552,8 +375,6 @@
         document.getElementById('settingsTitle').innerText = LANG[lang].settingsTitle;
         document.getElementById('petsTitle').innerText = LANG[lang].petsTitle;
         document.getElementById('petNote').innerText = LANG[lang].petNote;
-        document.getElementById('questsTitle').innerText = LANG[lang].questsTitle;
-        document.getElementById('questNote').innerText = LANG[lang].questNote;
 
         document.getElementById('tabMineName').innerText = LANG[lang].tabMineName;
         document.getElementById('tabMarketName').innerText = LANG[lang].tabMarketName;
@@ -561,7 +382,6 @@
         document.getElementById('tabFortuneName').innerText = LANG[lang].tabFortuneName;
         document.getElementById('tabAchieveName').innerText = LANG[lang].tabAchieveName;
         document.getElementById('tabPetsName').innerText = LANG[lang].tabPetsName;
-        document.getElementById('tabQuestsName').innerText = LANG[lang].tabQuestsName;
         document.getElementById('tabSettingsName').innerText = LANG[lang].tabSettingsName;
         document.getElementById('upgradeBtn').innerText = LANG[lang].upgradeBtn;
         document.getElementById('buyEnergyBtn').innerText = '🧪 Купить энергию (50 🪙)';
@@ -584,8 +404,6 @@
         // питомцы
         updatePetUI('pet1');
         updatePetUI('pet2');
-        // квест
-        updateQuestUI();
 
         let btn = document.getElementById('mineBtn');
         if (energy < pick.energyCost) {
@@ -649,7 +467,7 @@
 
     // ---------- ТАБЫ ----------
     function switchTab(tab) {
-        let tabs = ['mine','market','shop','fortune','achieve','pets','quests','settings'];
+        let tabs = ['mine','market','shop','fortune','achieve','pets','settings'];
         tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
         tabs.forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('tab-active'));
         document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
@@ -708,7 +526,6 @@
             }
         } catch (e) {}
         addLog(`${LANG[lang].logMined} ${oreDisplay} x${count} (энергии потрачено: ${pick.energyCost})`);
-        // onMine(oreType); // временно отключено
         saveGame(); updateUI();
     }
 
@@ -718,7 +535,6 @@
         coins += total;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         addLog(`${LANG[lang].logSold} ${total} 🪙`);
-        // onSell(total); // временно отключено
         saveGame(); updateUI();
         buffDoubleSell = false;
     }
@@ -730,7 +546,6 @@
         coins -= cost;
         pickLevel++;
         addLog(`Кирка улучшена до ${pickLevel} уровня!`);
-        // onUpgrade(); // временно отключено
         saveGame(); updateUI();
     }
 

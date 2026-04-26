@@ -7,423 +7,390 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
+            background: #1a1a1a; color: #e0e0e0; font-family: Arial, sans-serif; margin: 0; padding: 10px; text-align: center;
         }
-        .stats {
-            background: #2a2a2a;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            font-size: 18px;
+        body.light {
+            background: #f0f0f0; color: #222;
         }
-        .energy-bar {
-            background: #333;
-            border-radius: 10px;
-            height: 20px;
-            margin: 10px 0;
-            overflow: hidden;
+        .stats, .panel {
+            background: #2a2a2a; border-radius: 15px; padding: 15px; margin: 5px 0; font-size: 16px;
         }
-        .energy-fill {
-            background: #f1c40f;
-            height: 100%;
-            transition: width 0.3s;
+        body.light .stats, body.light .panel {
+            background: #fff; color: #222; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         button {
-            background-color: #3a3a3a;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            margin: 5px;
-            border-radius: 12px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: bold;
+            background: #3a3a3a; color: #fff; border: none; padding: 12px 15px; margin: 4px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: bold; width: 90%;
         }
-        button:active {
-            background-color: #f1c40f;
-            color: black;
+        body.light button {
+            background: #ddd; color: #222;
         }
         #mineBtn {
-            width: 90%;
-            background-color: #c4450c;
-            font-size: 22px;
-            padding: 20px;
+            background: #c4450c; font-size: 22px; padding: 15px;
+        }
+        .tab-bar {
+            display: flex; justify-content: space-around; margin: 10px 0;
+        }
+        .tab-bar button {
+            flex: 1; background: #2a2a2a; border-radius: 12px 12px 0 0; font-size: 14px; padding: 10px 0;
+        }
+        body.light .tab-bar button {
+            background: #ddd;
+        }
+        .tab-active {
+            background: #c4450c !important; color: #fff;
+        }
+        .energy-bar {
+            background: #333; border-radius: 8px; height: 16px; margin: 5px 0; overflow: hidden;
+        }
+        .energy-fill {
+            background: #f1c40f; height: 100%; transition: width 0.3s;
+        }
+        .hidden {
+            display: none;
         }
         #log {
-            margin-top: 15px;
-            padding: 10px;
-            background: #2a2a2a;
-            border-radius: 10px;
-            min-height: 30px;
-            font-size: 16px;
-            color: #f1c40f;
+            margin: 10px 0; padding: 8px; background: #2a2a2a; border-radius: 10px; color: #f1c40f; font-size: 14px;
         }
-        .achievement {
-            background: #333;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 5px 0;
-            font-size: 14px;
+        body.light #log {
+            background: #eee; color: #c4450c;
         }
-        .unlocked {
-            border-left: 5px solid #f1c40f;
-            color: #f1c40f;
-        }
-        .locked {
-            border-left: 5px solid #666;
-            color: #999;
-        }
-        .timer {
-            font-size: 14px;
-            color: #aaa;
-            margin-top: 5px;
-        }
-        .cost-info {
-            font-size: 14px;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-        .id-badge {
-            font-size: 14px;
-            color: #888;
-            margin-bottom: 10px;
-        }
-        .credit {
-            margin-top: 25px;
-            font-size: 12px;
-            color: #666;
-        }
-        /* Модальное окно */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background: #2a2a2a;
-            border-radius: 15px;
-            padding: 20px;
-            width: 90%;
-            max-height: 80%;
-            overflow-y: auto;
-            position: relative;
-            color: #e0e0e0;
-            text-align: left;
-            font-size: 14px;
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px; right: 15px;
-            font-size: 28px;
-            cursor: pointer;
-            color: #f1c40f;
-            background: none;
-            border: none;
-        }
-        .pickaxe-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        .pickaxe-table th, .pickaxe-table td {
-            border: 1px solid #444;
-            padding: 6px 4px;
-            text-align: center;
-        }
-        .pickaxe-table th {
-            background: #c4450c;
-            color: white;
+        .badge {
+            font-size: 12px; color: #888;
         }
     </style>
 </head>
 <body>
+<div class="stats">
+    <span class="badge" id="userIdDisplay"></span><br>
+    💰 <span id="coins">150</span> 🪙<br>
+    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>)<br>
+    ⚡ <span id="energy">20</span>/<span id="maxEnergy">20</span>
+    <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
+    <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
+    <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
+</div>
 
-    <div class="stats">
-        <div>💰 Монеты: <span id="coins">150</span></div>
-        <div>🔨 Кирка: <span id="pickaxeName">Каменная</span> (Ур. <span id="pickLevel">2</span>)</div>
-        <div>⚡ Энергия: <span id="energy">20</span> / <span id="maxEnergy">20</span></div>
-        <div class="energy-bar">
-            <div class="energy-fill" id="energyFill" style="width: 100%;"></div>
-        </div>
-        <div class="timer" id="regenTimer"></div>
-        <div>⛏️ Всего добыто руды: <span id="totalOreMined">0</span></div>
-    </div>
+<div class="stats">
+    <h3>🎒 Инвентарь</h3>
+    <div>🗿 Камень: <span id="stone">0</span></div>
+    <div>⚙️ Железо: <span id="iron">0</span></div>
+    <div>🥇 Золото: <span id="gold">0</span></div>
+    <div>💎 Алмазы: <span id="diamond">0</span></div>
+    <div>💠 Мифрил: <span id="mithril">0</span></div>
+</div>
 
-    <div class="stats">
-        <h3>🎒 Руда в инвентаре</h3>
-        <div>🗿 Камень: <span id="stone">0</span></div>
-        <div>⚙️ Железо: <span id="iron">0</span></div>
-        <div>🥇 Золото: <span id="gold">0</span></div>
-        <div>💎 Алмазы: <span id="diamond">0</span></div>
-    </div>
+<div class="tab-bar">
+    <button id="tabMine" class="tab-active" onclick="switchTab('mine')">⛏️ Шахта</button>
+    <button id="tabMarket" onclick="switchTab('market')">📈 Рынок</button>
+    <button id="tabShop" onclick="switchTab('shop')">🛒 Магазин</button>
+    <button id="tabFortune" onclick="switchTab('fortune')">🎡 Фортуна</button>
+    <button id="tabSettings" onclick="switchTab('settings')">⚙️</button>
+</div>
 
-    <button id="mineBtn" onclick="mine()">⛏️ КОПАТЬ</button>
-
-    <button onclick="sellAll()">💰 Продать всё</button>
-    <div class="cost-info" id="pickUpgradeInfo"></div>
+<div id="panelMine" class="panel">
+    <button id="mineBtn" onclick="mine()">⛏️ Копать</button>
+    <div id="pickUpgradeCost" style="font-size:12px; color:#aaa;">Стоимость улучшения: 600 🪙</div>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
-    <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
-    <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="upgradeEnergyCost">200</span> 🪙)</button>
-    <button onclick="showAchievements()">🏆 Достижения</button>
-    <button onclick="openGuide()">📖 Справочник</button>
+    <button onclick="sellAll()">💰 Продать всё</button>
+    <button onclick="claimDaily()">🎁 Ежедневная награда</button>
+</div>
 
-    <div id="log">Нажми "Копать", чтобы начать!</div>
+<div id="panelMarket" class="panel hidden">
+    <h3>📈 Рыночные цены</h3>
+    <div id="marketPrices"></div>
+    <button onclick="sellAll()">💰 Продать всё по рынку</button>
+</div>
 
-    <div id="achievementsPanel" style="display: none;">
-        <h3>🏆 Достижения</h3>
-        <div id="ach1" class="achievement locked">🔒 Новичок — добыть 10 камней</div>
-        <div id="ach2" class="achievement locked">🔒 Счастливчик — найти алмаз</div>
-        <div id="ach3" class="achievement locked">🔒 Богач — накопить 1000 монет</div>
-        <button onclick="hideAchievements()">Закрыть</button>
-    </div>
+<div id="panelShop" class="panel hidden">
+    <h3>🛒 Баффы (монеты)</h3>
+    <button onclick="buyBuff('ore')">💎 2x Руда (30с) — 150🪙</button>
+    <button onclick="buyBuff('sell')">💵 2x Продажа (30с) — 200🪙</button>
+    <div id="activeBuffs" style="margin-top:10px;"></div>
+</div>
 
-    <!-- Модальное окно Справочника -->
-    <div id="guideModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeGuide()">&times;</button>
-            <h2>📖 Справочник шахтёра</h2>
-            <table class="pickaxe-table">
-                <thead>
-                    <tr><th>Ур.</th><th>Кирка</th><th>🗿 Камень</th><th>⚙️ Железо</th><th>🥇 Золото</th><th>💎 Алмаз</th></tr>
-                </thead>
-                <tbody id="guideBody"></tbody>
-            </table>
-        </div>
-    </div>
+<div id="panelFortune" class="panel hidden">
+    <h3>🎡 Колесо фортуны</h3>
+    <button onclick="spinWheel()">🎡 Крутить (100🪙)</button>
+</div>
 
-    <div class="credit">Made by Fedor Chernyshev</div>
+<div id="panelSettings" class="panel hidden">
+    <h3>⚙️ Настройки</h3>
+    <button onclick="toggleTheme()">🌓 Сменить тему</button>
+    <button onclick="toggleLang()">🌐 EN/RU</button>
+    <button onclick="testVibration()">📳 Вибрация</button>
+    <button onclick="resetProgress()">🗑️ Сбросить прогресс</button>
+</div>
 
-    <script>
-        window.Telegram.WebApp.ready();
+<div id="log"></div>
 
-        const RECOVERY_INTERVAL = 15 * 60;
-        const RECOVERY_AMOUNT = 1;
-        const MAX_PICK_LEVEL = 60;
+<div style="font-size:12px; color:#666; margin-top:10px;">Made by Fedor Chernyshev</div>
 
-        const pickNames = {
-            1: "Деревянная", 2: "Каменная", 3: "Железная", 4: "Золотая", 5: "Лазерный бур",
-            6: "Мифриловая", 7: "Адамантитовая", 8: "Обсидиановая", 9: "Кристальная", 10: "Титановая",
-            11: "Эльфийская", 12: "Гномья сталь", 13: "Рунная", 14: "Призрачная", 15: "Драконья кость",
-            16: "Изумрудная", 17: "Сапфировая", 18: "Рубиновая", 19: "Алмазная", 20: "Космический бур",
-            21: "Хронокирка", 22: "Квантовая", 23: "Тёмная материя", 24: "Нейтронная", 25: "Гравитационный молот",
-            26: "Антиматериальная", 27: "Плазменный резец", 28: "Звёздный сплав", 29: "Чёрная дыра", 30: "Звездоруб",
-            31: "Божественный гнев", 32: "Клинок Хаоса", 33: "Скипетр Титана", 34: "Молот Времени", 35: "Коса Смерти",
-            36: "Копьё Судьбы", 37: "Секира Апокалипсиса", 38: "Меч Мира", 39: "Посох Мага", 40: "Лук Эльфов",
-            41: "Кинжал Теней", 42: "Арбалет Гномов", 43: "Клюв Феникса", 44: "Коготь Демона", 45: "Жезл Стихий",
-            46: "Кристалл Души", 47: "Око Бездны", 48: "Сердце Звезды", 49: "Венец Творца", 50: "Ключ Вселенной",
-            51: "Якорь Реальности", 52: "Сфера Пустоты", 53: "Кольцо Вечности", 54: "Перо Создателя", 55: "Кисть Художника",
-            56: "Молот Вулкана", 57: "Щит Атлантов", 58: "Шлем Невидимости", 59: "Сапоги Скорости", 60: "Корона Абсолюта"
-        };
+<script>
+    window.Telegram.WebApp.ready();
 
-        function getOreChances(level) {
-            if (level >= 60) return [0, 0, 30, 70];
-            if (level >= 55) return [0, 5, 35, 60];
-            if (level >= 50) return [0, 10, 40, 50];
-            if (level >= 45) return [5, 15, 40, 40];
-            if (level >= 40) return [10, 20, 35, 35];
-            if (level >= 35) return [15, 25, 30, 30];
-            if (level >= 30) return [20, 25, 30, 25];
-            if (level >= 25) return [25, 30, 25, 20];
-            if (level >= 20) return [30, 30, 25, 15];
-            if (level >= 15) return [35, 30, 20, 15];
-            if (level >= 10) return [40, 30, 20, 10];
-            if (level >= 5)  return [50, 30, 15, 5];
-            return [70 - level*5, 20 + level*3, 10 + level*2, 0 + level*1];
+    // ---------- ЯЗЫКИ ----------
+    const LANG = {
+        ru: { mine: '⛏️ Копать', noEnergy: '😴 Нет энергии', sell: '💰 Продать всё', upgrade: '🔨 Улучшить кирку', daily: '🎁 Ежедневная награда', logNoEnergy: 'Нет энергии!' },
+        en: { mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade', daily: '🎁 Daily gift', logNoEnergy: 'No energy!' }
+    };
+    let lang = localStorage.getItem('lang') || 'ru';
+
+    // ---------- БАЗОВЫЕ ПЕРЕМЕННЫЕ ----------
+    let coins = 150, energy = 20, maxEnergy = 20, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false;
+    let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
+    let pickNames = {1:'Деревянная',2:'Каменная',3:'Железная',4:'Золотая',5:'Лазерный бур',6:'Мифриловая',7:'Адамантитовая',8:'Обсидиановая',9:'Кристальная',10:'Титановая',11:'Эльфийская',12:'Гномья сталь',13:'Рунная',14:'Призрачная',15:'Драконья кость',16:'Изумрудная',17:'Сапфировая',18:'Рубиновая',19:'Алмазная',20:'Космический бур',21:'Хронокирка',22:'Квантовая',23:'Тёмная материя',24:'Нейтронная',25:'Гравитационный молот',26:'Антиматериальная',27:'Плазменный резец',28:'Звёздный сплав',29:'Чёрная дыра',30:'Звездоруб'};
+    let lastTimestamp = Date.now();
+    let upgradeCost = 200;
+    let buffDoubleOre = false, buffDoubleOreEnd = 0;
+    let buffDoubleSell = false, buffDoubleSellEnd = 0;
+    let lastDaily = localStorage.getItem('lastDaily') ? Number(localStorage.getItem('lastDaily')) : 0;
+
+    // цены рынка
+    let market = { stone: 2, iron: 8, gold: 25, diamond: 100, mithril: 50 };
+
+    // ---------- ФУНКЦИИ ----------
+    function saveGame() {
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, inventory, upgradeCost, lastTimestamp: Date.now() };
+        localStorage.setItem('shakhter_save', JSON.stringify(data));
+    }
+
+    function loadGame() {
+        let saved = localStorage.getItem('shakhter_save');
+        if (saved) {
+            try {
+                let d = JSON.parse(saved);
+                coins = d.coins; energy = d.energy; maxEnergy = d.maxEnergy; pickLevel = d.pickLevel; totalOre = d.totalOre; totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
+                inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
+                upgradeCost = d.upgradeCost || 200;
+                lastTimestamp = d.lastTimestamp || Date.now();
+            } catch(e) { resetGame(); }
+        } else { resetGame(); }
+        recoverEnergy();
+        updateUI();
+    }
+
+    function resetGame() {
+        coins = 150; energy = 20; maxEnergy = 20; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false;
+        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
+        upgradeCost = 200; lastTimestamp = Date.now();
+    }
+
+    function recoverEnergy() {
+        let now = Date.now();
+        let diff = Math.floor((now - lastTimestamp) / 1000);
+        let gained = Math.floor(diff / 900); // 15 мин
+        if (gained > 0) {
+            energy = Math.min(maxEnergy, energy + gained);
+            lastTimestamp = now - (diff % 900) * 1000;
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('coins').innerText = coins;
+        document.getElementById('energy').innerText = energy;
+        document.getElementById('maxEnergy').innerText = maxEnergy;
+        document.getElementById('pickName').innerText = pickNames[pickLevel];
+        document.getElementById('pickLevel').innerText = pickLevel;
+        document.getElementById('totalOre').innerText = totalOre;
+        document.getElementById('stone').innerText = inventory.stone;
+        document.getElementById('iron').innerText = inventory.iron;
+        document.getElementById('gold').innerText = inventory.gold;
+        document.getElementById('diamond').innerText = inventory.diamond;
+        document.getElementById('mithril').innerText = inventory.mithril;
+        document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
+        document.getElementById('pickUpgradeCost').innerText = pickLevel >= 30 ? 'Макс. уровень' : 'Стоимость улучшения: ' + (pickLevel * 300) + ' 🪙';
+
+        let btn = document.getElementById('mineBtn');
+        if (energy <= 0) {
+            btn.innerText = LANG[lang].noEnergy;
+            btn.style.opacity = '0.6';
+        } else {
+            btn.innerText = LANG[lang].mine;
+            btn.style.opacity = '1';
         }
 
-        // Заполняем таблицу справочника
-        function buildGuideTable() {
-            const tbody = document.getElementById('guideBody');
-            let html = '';
-            for (let i = 1; i <= MAX_PICK_LEVEL; i++) {
-                const ch = getOreChances(i);
-                html += `<tr>
-                    <td>${i}</td>
-                    <td>${pickNames[i]}</td>
-                    <td>${ch[0]}%</td>
-                    <td>${ch[1]}%</td>
-                    <td>${ch[2]}%</td>
-                    <td>${ch[3]}%</td>
-                </tr>`;
-            }
-            tbody.innerHTML = html;
+        // таймер восстановления
+        let sec = getSecondsToNext();
+        let min = Math.floor(sec / 60), s = sec % 60;
+        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? 'Энергия полная' : `След. +1⚡ через ${min}м ${s}с`;
+
+        // ID пользователя
+        if (window.Telegram.WebApp.initDataUnsafe?.user) {
+            document.getElementById('userIdDisplay').innerText = 'ID: ' + window.Telegram.WebApp.initDataUnsafe.user.id;
         }
-        buildGuideTable();
+    }
 
-        function openGuide() {
-            document.getElementById('guideModal').style.display = 'flex';
+    function getSecondsToNext() {
+        if (energy >= maxEnergy) return 0;
+        let now = Date.now();
+        let diff = Math.floor((now - lastTimestamp) / 1000);
+        return 900 - (diff % 900);
+    }
+
+    function addLog(text) {
+        document.getElementById('log').innerText = text;
+    }
+
+    // ---------- ТАБЫ ----------
+    function switchTab(tab) {
+        document.getElementById('panelMine').classList.toggle('hidden', tab !== 'mine');
+        document.getElementById('panelMarket').classList.toggle('hidden', tab !== 'market');
+        document.getElementById('panelShop').classList.toggle('hidden', tab !== 'shop');
+        document.getElementById('panelFortune').classList.toggle('hidden', tab !== 'fortune');
+        document.getElementById('panelSettings').classList.toggle('hidden', tab !== 'settings');
+        ['tabMine','tabMarket','tabShop','tabFortune','tabSettings'].forEach(id => document.getElementById(id).classList.remove('tab-active'));
+        document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
+        if (tab === 'market') updateMarketDisplay();
+    }
+
+    // ---------- ИГРОВЫЕ ДЕЙСТВИЯ ----------
+    function getOreChances(lvl) {
+        let base = [70 - lvl*5, 20 + lvl*3, 10 + lvl*2, 0 + lvl*1, 0];
+        if (lvl >= 5) base = [40, 35, 20, 5, 0];
+        if (lvl >= 10) base = [30, 30, 25, 10, 5];
+        if (lvl >= 15) base = [20, 25, 30, 15, 10];
+        if (lvl >= 20) base = [10, 20, 35, 25, 10];
+        if (lvl >= 25) base = [5, 15, 40, 30, 10];
+        return base; // stone, iron, gold, diamond, mithril
+    }
+
+    function mine() {
+        if (energy <= 0) { addLog(LANG[lang].logNoEnergy); return; }
+        energy--;
+        let chances = getOreChances(pickLevel);
+        let r = Math.random() * 100;
+        let count = buffDoubleOre ? 2 : 1;
+        let ore = '';
+        if (r < chances[0]) { inventory.stone += count; totalStone += count; ore = '🗿 Камень'; }
+        else if (r < chances[0]+chances[1]) { inventory.iron += count; ore = '⚙️ Железо'; }
+        else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; ore = '🥇 Золото'; }
+        else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
+        else { inventory.mithril += count; ore = '💠 Мифрил'; }
+        totalOre += count;
+        if (navigator.vibrate) navigator.vibrate(30);
+        addLog(`Добыто ${ore} x${count}`);
+        saveGame(); updateUI();
+    }
+
+    function sellAll() {
+        let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
+        if (buffDoubleSell) total *= 2;
+        coins += total;
+        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
+        addLog(`Продано за ${total} 🪙`);
+        saveGame(); updateUI();
+    }
+
+    function upgradePick() {
+        if (pickLevel >= 30) { addLog('Макс. уровень!'); return; }
+        let cost = pickLevel * 300;
+        if (coins < cost) { addLog('Не хватает монет!'); return; }
+        coins -= cost;
+        pickLevel++;
+        saveGame(); updateUI();
+    }
+
+    // ---------- БАФФЫ ----------
+    function buyBuff(type) {
+        if (type === 'ore') {
+            if (coins < 150) { addLog('Не хватает монет'); return; }
+            coins -= 150; buffDoubleOre = true; buffDoubleOreEnd = Date.now() + 30000;
+        } else if (type === 'sell') {
+            if (coins < 200) { addLog('Не хватает монет'); return; }
+            coins -= 200; buffDoubleSell = true; buffDoubleSellEnd = Date.now() + 30000;
         }
-        function closeGuide() {
-            document.getElementById('guideModal').style.display = 'none';
+        saveGame(); updateUI();
+        showActiveBuffs();
+    }
+
+    setInterval(() => {
+        let now = Date.now();
+        if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
+        if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
+        showActiveBuffs();
+    }, 1000);
+
+    function showActiveBuffs() {
+        let el = document.getElementById('activeBuffs');
+        let text = '';
+        if (buffDoubleOre) text += '💎 2x Руда активно<br>';
+        if (buffDoubleSell) text += '💵 2x Продажа активно<br>';
+        el.innerHTML = text || 'Нет активных баффов';
+    }
+
+    // ---------- РЫНОК ----------
+    function updateMarketDisplay() {
+        let html = '';
+        for (let ore in market) {
+            html += `<div>${ore}: ${market[ore]} 🪙</div>`;
         }
+        document.getElementById('marketPrices').innerHTML = html;
+    }
 
-        // Игровая логика (без изменений)
-        let coins = 150, energy = 20, maxEnergy = 20, pickLevel = 2, pickName = pickNames[pickLevel];
-        let totalStone = 0, totalDiamondFound = false, energyUpgradeLevel = 0, energyUpgradeCost = 200;
-        let lastTimestamp = Date.now(), totalOreMined = 0;
-        let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
-
-        function loadGame() {
-            const saved = localStorage.getItem('shakhter_save');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    coins = data.coins ?? 150;
-                    energy = data.energy ?? 20;
-                    maxEnergy = data.maxEnergy ?? 20;
-                    pickLevel = data.pickLevel ?? 2;
-                    inventory = data.inventory ?? { stone: 0, iron: 0, gold: 0, diamond: 0 };
-                    totalStone = data.totalStone ?? 0;
-                    totalDiamondFound = data.totalDiamondFound ?? false;
-                    energyUpgradeLevel = data.energyUpgradeLevel ?? 0;
-                    energyUpgradeCost = data.energyUpgradeCost ?? 200;
-                    lastTimestamp = data.lastTimestamp ?? Date.now();
-                    totalOreMined = data.totalOreMined ?? 0;
-                } catch (e) { resetToDefault(); }
-            } else { resetToDefault(); }
-            pickName = pickNames[pickLevel];
-            recoverEnergy();
-            updateUI();
+    setInterval(() => {
+        for (let ore in market) {
+            let change = (Math.random() * 0.4) - 0.2;
+            market[ore] = Math.max(1, Math.round(market[ore] * (1 + change)));
         }
+        updateMarketDisplay();
+    }, 600000); // каждые 10 минут
 
-        function resetToDefault() {
-            coins = 150; energy = 20; maxEnergy = 20; pickLevel = 2;
-            inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
-            totalStone = 0; totalDiamondFound = false;
-            energyUpgradeLevel = 0; energyUpgradeCost = 200;
-            lastTimestamp = Date.now(); totalOreMined = 0;
+    // ---------- КОЛЕСО ФОРТУНЫ ----------
+    function spinWheel() {
+        if (coins < 100) { addLog('Не хватает монет'); return; }
+        coins -= 100;
+        let prizes = ['+200 монет', 'Эликсир энергии', 'x2 Руда 15с', 'Алмаз в инвентарь', 'Мифрил'];
+        let prize = prizes[Math.floor(Math.random() * prizes.length)];
+        if (prize === '+200 монет') coins += 200;
+        if (prize === 'Эликсир энергии') energy = maxEnergy;
+        if (prize === 'x2 Руда 15с') { buffDoubleOre = true; buffDoubleOreEnd = Date.now() + 15000; }
+        if (prize === 'Алмаз в инвентарь') { inventory.diamond++; totalDiamondFound = true; }
+        if (prize === 'Мифрил') inventory.mithril++;
+        addLog('🎡 Выиграл: ' + prize);
+        saveGame(); updateUI();
+    }
+
+    // ---------- ЕЖЕДНЕВНАЯ НАГРАДА ----------
+    function claimDaily() {
+        let now = Date.now();
+        if (now - lastDaily < 86400000) {
+            let left = Math.ceil((86400000 - (now - lastDaily)) / 3600000);
+            addLog(`Награда доступна через ${left} ч.`);
+            return;
         }
+        coins += 50; energy = maxEnergy;
+        lastDaily = now; localStorage.setItem('lastDaily', lastDaily);
+        addLog('🎁 Ежедневная награда: +50🪙 и полная энергия!');
+        saveGame(); updateUI();
+    }
 
-        function saveGame() {
-            const data = { coins, energy, maxEnergy, pickLevel, inventory, totalStone, totalDiamondFound, energyUpgradeLevel, energyUpgradeCost, lastTimestamp, totalOreMined };
-            localStorage.setItem('shakhter_save', JSON.stringify(data));
-        }
+    // ---------- НАСТРОЙКИ ----------
+    function toggleTheme() {
+        document.body.classList.toggle('light');
+        localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+    }
+    function toggleLang() {
+        lang = lang === 'ru' ? 'en' : 'ru';
+        localStorage.setItem('lang', lang);
+        updateUI();
+    }
+    function testVibration() {
+        if (navigator.vibrate) { navigator.vibrate(300); addLog('Вибро!'); }
+        else addLog('Вибрация не поддерживается');
+    }
+    function resetProgress() {
+        if (!confirm('Точно удалить весь прогресс?')) return;
+        localStorage.removeItem('shakhter_save');
+        resetGame(); updateUI();
+    }
 
-        function recoverEnergy() {
-            if (energy >= maxEnergy) { lastTimestamp = Date.now(); return; }
-            const now = Date.now();
-            const elapsed = Math.floor((now - lastTimestamp) / 1000);
-            if (elapsed >= RECOVERY_INTERVAL) {
-                const intervals = Math.floor(elapsed / RECOVERY_INTERVAL);
-                energy = Math.min(maxEnergy, energy + intervals * RECOVERY_AMOUNT);
-                lastTimestamp = now - ((elapsed % RECOVERY_INTERVAL) * 1000);
-            }
-        }
-
-        function getSecondsToNextEnergy() {
-            if (energy >= maxEnergy) return 0;
-            const now = Date.now();
-            const elapsed = Math.floor((now - lastTimestamp) / 1000);
-            return RECOVERY_INTERVAL - (elapsed % RECOVERY_INTERVAL);
-        }
-
-        function updateUI() {
-            document.getElementById('coins').innerText = coins;
-            document.getElementById('energy').innerText = energy;
-            document.getElementById('maxEnergy').innerText = maxEnergy;
-            document.getElementById('pickaxeName').innerText = pickName;
-            document.getElementById('pickLevel').innerText = pickLevel;
-            document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
-            document.getElementById('stone').innerText = inventory.stone;
-            document.getElementById('iron').innerText = inventory.iron;
-            document.getElementById('gold').innerText = inventory.gold;
-            document.getElementById('diamond').innerText = inventory.diamond;
-            document.getElementById('upgradeEnergyCost').innerText = energyUpgradeCost;
-            document.getElementById('totalOreMined').innerText = totalOreMined;
-
-            const pickInfoEl = document.getElementById('pickUpgradeInfo');
-            if (pickLevel >= MAX_PICK_LEVEL) {
-                pickInfoEl.innerText = '🔨 Макс. уровень';
-            } else {
-                pickInfoEl.innerText = `🔨 Стоимость улучшения: ${pickLevel * 300} 🪙`;
-            }
-
-            const btn = document.getElementById('mineBtn');
-            if (energy <= 0) {
-                btn.innerText = "😴 НЕТ ЭНЕРГИИ"; btn.style.opacity = "0.5";
-            } else {
-                btn.innerText = "⛏️ КОПАТЬ"; btn.style.opacity = "1";
-            }
-
-            const sec = getSecondsToNextEnergy();
-            document.getElementById('regenTimer').innerText = energy >= maxEnergy ? 'Энергия полна' : `След. +1⚡ через ${Math.floor(sec/60)}м ${sec%60}с`;
-
-            document.getElementById('ach1').className = totalStone >= 10 ? "achievement unlocked" : "achievement locked";
-            document.getElementById('ach2').className = totalDiamondFound ? "achievement unlocked" : "achievement locked";
-            document.getElementById('ach3').className = coins >= 1000 ? "achievement unlocked" : "achievement locked";
-        }
-
-        setInterval(updateUI, 1000);
-
-        function addLog(text) { document.getElementById('log').innerText = text; }
-
-        function mine() {
-            if (energy <= 0) { addLog("Нет энергии!"); return; }
-            energy--;
-            const chances = getOreChances(pickLevel);
-            const rand = Math.random() * 100;
-            let oreName = "";
-            if (rand < chances[0]) { inventory.stone++; totalStone++; oreName = "🗿 Камень"; }
-            else if (rand < chances[0] + chances[1]) { inventory.iron++; oreName = "⚙️ Железо"; }
-            else if (rand < chances[0] + chances[1] + chances[2]) { inventory.gold++; oreName = "🥇 Золото"; }
-            else { inventory.diamond++; totalDiamondFound = true; oreName = "💎 АЛМАЗ!"; }
-            totalOreMined++;
-            addLog(`Добыто: ${oreName}!`);
-            saveGame(); updateUI();
-        }
-
-        function sellAll() {
-            let total = inventory.stone * 2 + inventory.iron * 8 + inventory.gold * 25 + inventory.diamond * 100;
-            coins += total;
-            inventory = { stone: 0, iron: 0, gold: 0, diamond: 0 };
-            addLog(`Продано всё за ${total} монет!`);
-            saveGame(); updateUI();
-        }
-
-        function upgradePick() {
-            if (pickLevel >= MAX_PICK_LEVEL) { addLog("Максимальный уровень!"); return; }
-            const cost = pickLevel * 300;
-            if (coins < cost) { addLog(`Не хватает монет! Нужно ${cost}.`); return; }
-            coins -= cost; pickLevel++; pickName = pickNames[pickLevel];
-            addLog(`Кирка улучшена до: ${pickName}!`);
-            saveGame(); updateUI();
-        }
-
-        function buyEnergy() {
-            if (coins < 50) { addLog("Не хватает монет!"); return; }
-            if (energy >= maxEnergy) { addLog("Энергия полна!"); return; }
-            coins -= 50; energy = maxEnergy;
-            addLog("Энергия полностью восстановлена!");
-            saveGame(); updateUI();
-        }
-
-        function upgradeMaxEnergy() {
-            if (coins < energyUpgradeCost) { addLog(`Не хватает монет! Нужно ${energyUpgradeCost}.`); return; }
-            coins -= energyUpgradeCost; energyUpgradeLevel++; maxEnergy += 2; energy += 2;
-            energyUpgradeCost = 200 + energyUpgradeLevel * 100;
-            addLog(`Максимальная энергия увеличена до ${maxEnergy}!`);
-            saveGame(); updateUI();
-        }
-
-        function showAchievements() {
-            document.getElementById('achievementsPanel').style.display = 'block';
-        }
-        function hideAchievements() {
-            document.getElementById('achievementsPanel').style.display = 'none';
-        }
-
-        loadGame();
-    </script>
+    // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+    if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
+    loadGame();
+    setInterval(() => {
+        recoverEnergy();
+        updateUI();
+    }, 1000);
+</script>
 </body>
-    </html>
+</html>

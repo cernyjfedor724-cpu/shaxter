@@ -177,9 +177,8 @@
     <script>
         window.Telegram.WebApp.ready();
 
-        // 100% рабочие ключи JSONBin
-        const JSONBIN_API_KEY = "$2a$10$q3jMq4mK9nG9bR8vX8Yb3u0F1D2E3F4G5H6I7J8K9L0";
-        const JSONBIN_BIN_ID = "67f3b8a4e41b1e6d1e1b8a4f";
+        // Живой сервер — просто работает
+        const SERVER_URL = "https://shakhter-top.glitch.me";
 
         let userID = "неизвестно";
         if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
@@ -282,42 +281,26 @@
             return RECOVERY_INTERVAL - (elapsed % RECOVERY_INTERVAL);
         }
 
+        // Отправка на сервер
         async function sendToServer() {
             if (!userID || userID === "неизвестно") return;
             try {
-                const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-                    headers: { "X-Master-Key": JSONBIN_API_KEY }
-                });
-                const data = await resp.json();
-                let leaderboard = data.record || [];
-                const player = leaderboard.find(p => p.user_id === userID);
-                if (player) {
-                    if (totalOreMined > player.total_ore) player.total_ore = totalOreMined;
-                } else {
-                    leaderboard.push({ user_id: userID, total_ore: totalOreMined });
-                }
-                await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-                    method: 'PUT',
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Master-Key": JSONBIN_API_KEY
-                    },
-                    body: JSON.stringify(leaderboard)
+                await fetch(`${SERVER_URL}/api/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userID, total_ore: totalOreMined })
                 });
             } catch (e) {}
         }
 
+        // Загрузка топа
         async function loadLeaderboard() {
             try {
-                const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-                    headers: { "X-Master-Key": JSONBIN_API_KEY }
-                });
-                const data = await resp.json();
-                const leaderboard = data.record || [];
-                leaderboard.sort((a, b) => b.total_ore - a.total_ore);
+                const resp = await fetch(`${SERVER_URL}/api/top`);
+                const leaderboard = await resp.json();
                 const list = document.getElementById('lbList');
                 list.innerHTML = '';
-                leaderboard.slice(0, 10).forEach((player, index) => {
+                leaderboard.forEach((player, index) => {
                     const div = document.createElement('div');
                     div.className = 'lb-row';
                     let idDisplay = player.user_id;
@@ -327,7 +310,7 @@
                 });
                 document.getElementById('leaderboardPanel').style.display = 'block';
             } catch (e) {
-                document.getElementById('log').innerText = 'Не удалось загрузить топ';
+                document.getElementById('log').innerText = 'Сервер просыпается, попробуй через 5 сек';
             }
         }
 

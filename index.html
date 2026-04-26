@@ -79,7 +79,7 @@
     <span class="badge" id="userIdDisplay"></span><br>
     💰 <span id="coins">150</span> 🪙<br>
     🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>) <span id="pickBonus" class="special-badge"></span><br>
-    ⚡ <span id="energy">20</span>/<span id="maxEnergy">20</span> (тратит <span id="energyCost">1</span> за удар)
+    ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
     <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
@@ -107,6 +107,7 @@
     <button id="mineBtn" onclick="mine()">⛏️ Копать</button>
     <div id="pickUpgradeCost" style="font-size:12px; color:#aaa;">Стоимость улучшения: 600 🪙</div>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
+    <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
     <button onclick="sellAll()">💰 Продать всё</button>
     <button onclick="claimDaily()">🎁 Ежедневная награда</button>
     <button class="share-btn" onclick="share()">📤 Поделиться</button>
@@ -165,8 +166,8 @@
             marketTitle: '📈 Рыночные цены', shopTitle: '🛒 Баффы (монеты)', fortuneTitle: '🎡 Колесо фортуны',
             settingsTitle: '⚙️ Настройки', achieveTitle: '🏆 Достижения', share: '📤 Поделиться',
             maxLevel: 'Макс. уровень', upgradeCost: 'Стоимость улучшения: ', upgrade: '🔨 Улучшить кирку',
-            energyFull: 'Энергия полная', energyNext: 'След. +1⚡ через', vibrateMsg: 'Вибро!',
-            vibrateUnavailable: 'Вибрация не поддерживается'
+            energyFull: 'Энергия полная', energyNext: 'След. +1⚡ через',
+            energyBought: 'Энергия восстановлена!'
         },
         en: {
             mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade',
@@ -177,8 +178,8 @@
             marketTitle: '📈 Market Prices', shopTitle: '🛒 Buffs (coins)', fortuneTitle: '🎡 Wheel of Fortune',
             settingsTitle: '⚙️ Settings', achieveTitle: '🏆 Achievements', share: '📤 Share',
             maxLevel: 'Max level', upgradeCost: 'Upgrade cost: ', upgrade: '🔨 Upgrade pickaxe',
-            energyFull: 'Energy full', energyNext: 'Next +1⚡ in', vibrateMsg: 'Vibration!',
-            vibrateUnavailable: 'Vibration unavailable'
+            energyFull: 'Energy full', energyNext: 'Next +1⚡ in',
+            energyBought: 'Energy restored!'
         }
     };
     let lang = localStorage.getItem('lang') || 'ru';
@@ -195,9 +196,9 @@
     // ---------- КИРКИ (100 штук) ----------
     const PICKAXES = [];
     for (let i = 1; i <= 100; i++) {
-        let energyCost = Math.min(10, Math.floor(i / 10) + 1); // растёт от 1 до 10
-        let multiChance = Math.min(0.9, (i - 1) * 0.01); // шанс множителя (до 90%)
-        let maxMulti = 2; // базовый множитель x2
+        let energyCost = Math.min(10, Math.floor(i / 10) + 1);
+        let multiChance = Math.min(0.9, (i - 1) * 0.01);
+        let maxMulti = 2;
         if (i >= 30) maxMulti = 3;
         if (i >= 60) maxMulti = 5;
         if (i >= 90) maxMulti = 10;
@@ -383,12 +384,12 @@
 
     function sellAll() {
         let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
-        if (buffDoubleSell) total *= 3; // бафф 3x
+        if (buffDoubleSell) total *= 3;
         coins += total;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         addLog(`${LANG[lang].logSold} ${total} 🪙`);
         saveGame(); updateUI();
-        buffDoubleSell = false; // одноразовый бафф
+        buffDoubleSell = false;
     }
 
     function upgradePick() {
@@ -397,6 +398,16 @@
         if (coins < cost) { addLog('Не хватает монет!'); return; }
         coins -= cost;
         pickLevel++;
+        saveGame(); updateUI();
+    }
+
+    // ---------- КУПИТЬ ЭНЕРГИЮ ----------
+    function buyEnergy() {
+        if (coins < 50) { addLog('Не хватает монет!'); return; }
+        if (energy >= maxEnergy) { addLog('Энергия полна!'); return; }
+        coins -= 50;
+        energy = maxEnergy;
+        addLog(LANG[lang].energyBought);
         saveGame(); updateUI();
     }
 
@@ -487,9 +498,9 @@
     function testVibration() {
         if (window.navigator && window.navigator.vibrate) {
             window.navigator.vibrate(300);
-            addLog(LANG[lang].vibrateMsg);
+            addLog(LANG[lang].vibrateMsg || 'Вибро!');
         } else {
-            addLog(LANG[lang].vibrateUnavailable);
+            addLog(LANG[lang].vibrateUnavailable || 'Вибрация не поддерживается');
         }
     }
     function resetProgress() {

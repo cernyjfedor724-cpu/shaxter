@@ -72,6 +72,12 @@
         .special-badge {
             display: inline-block; background: #c4450c; border-radius: 4px; padding: 2px 6px; font-size: 10px; margin-left: 6px;
         }
+        .invest-input {
+            width: 80%; padding: 10px; margin: 5px; background: #333; color: #fff; border: 1px solid #555; border-radius: 8px; font-size: 16px;
+        }
+        body.light .invest-input {
+            background: #fff; color: #222; border-color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -98,7 +104,7 @@
     <button id="tabMine" class="tab-active" onclick="switchTab('mine')">⛏️ Шахта</button>
     <button id="tabMarket" onclick="switchTab('market')">📈 Рынок</button>
     <button id="tabShop" onclick="switchTab('shop')">🛒 Магазин</button>
-    <button id="tabFortune" onclick="switchTab('fortune')">🎡 Фортуна</button>
+    <button id="tabFortune" onclick="switchTab('fortune')">🎡 Азарт</button>
     <button id="tabAchieve" onclick="switchTab('achieve')">🏆</button>
     <button id="tabSettings" onclick="switchTab('settings')">⚙️</button>
 </div>
@@ -129,6 +135,10 @@
 <div id="panelFortune" class="panel hidden">
     <h3>🎡 Колесо фортуны</h3>
     <button onclick="spinWheel()">🎡 Крутить (100🪙)</button>
+    <h3 style="margin-top:20px;">💼 Инвестиции</h3>
+    <p style="font-size:14px; color:#aaa;">Введите сумму и проверьте удачу (50% x2)</p>
+    <input type="number" id="investAmount" class="invest-input" placeholder="Сумма монет" min="1" step="1">
+    <button onclick="invest()">💰 Инвестировать</button>
 </div>
 
 <div id="panelAchieve" class="panel hidden">
@@ -163,11 +173,12 @@
             buffOre: '💎 2x Руда активно', buffSell: '💵 2x Продажа активно', shareText: 'Я играю в "Шахтёра"! Добыл',
             shareSuffix: 'руды киркой', tryYou: 'Попробуй и ты!', wheelPrize: '🎡 Выиграл: ',
             dailyClaim: '🎁 Ежедневная награда: +50🪙 и полная энергия!', dailyWait: 'Награда доступна через',
-            marketTitle: '📈 Рыночные цены', shopTitle: '🛒 Баффы (монеты)', fortuneTitle: '🎡 Колесо фортуны',
+            marketTitle: '📈 Рыночные цены', shopTitle: '🛒 Баффы (монеты)', fortuneTitle: '🎡 Азарт',
             settingsTitle: '⚙️ Настройки', achieveTitle: '🏆 Достижения', share: '📤 Поделиться',
             maxLevel: 'Макс. уровень', upgradeCost: 'Стоимость улучшения: ', upgrade: '🔨 Улучшить кирку',
-            energyFull: 'Энергия полная', energyNext: 'След. +1⚡ через',
-            energyBought: 'Энергия восстановлена!'
+            energyFull: 'Энергия полная', energyNext: 'След. +1⚡ через', energyBought: 'Энергия восстановлена!',
+            investWin: '📈 Инвестиция успешна! +', investLose: '📉 Инвестиция провалилась! -',
+            investError: 'Введите корректную сумму', investNoMoney: 'Недостаточно монет'
         },
         en: {
             mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade',
@@ -175,11 +186,12 @@
             buffOre: '💎 2x Ore active', buffSell: '💵 2x Sell active', shareText: 'I am playing "Miner"! Mined',
             shareSuffix: 'ore with', tryYou: 'Try it too!', wheelPrize: '🎡 Won: ',
             dailyClaim: '🎁 Daily reward: +50🪙 and full energy!', dailyWait: 'Reward available in',
-            marketTitle: '📈 Market Prices', shopTitle: '🛒 Buffs (coins)', fortuneTitle: '🎡 Wheel of Fortune',
+            marketTitle: '📈 Market Prices', shopTitle: '🛒 Buffs (coins)', fortuneTitle: '🎡 Gamble',
             settingsTitle: '⚙️ Settings', achieveTitle: '🏆 Achievements', share: '📤 Share',
             maxLevel: 'Max level', upgradeCost: 'Upgrade cost: ', upgrade: '🔨 Upgrade pickaxe',
-            energyFull: 'Energy full', energyNext: 'Next +1⚡ in',
-            energyBought: 'Energy restored!'
+            energyFull: 'Energy full', energyNext: 'Next +1⚡ in', energyBought: 'Energy restored!',
+            investWin: '📈 Investment won! +', investLose: '📉 Investment lost! -',
+            investError: 'Enter a valid amount', investNoMoney: 'Not enough coins'
         }
     };
     let lang = localStorage.getItem('lang') || 'ru';
@@ -339,7 +351,7 @@
         if (lvl >= 60) base = [30, 25, 25, 15, 5];
         if (lvl >= 80) base = [20, 25, 30, 20, 5];
         if (lvl >= 95) base = [10, 25, 35, 25, 5];
-        return base; // stone, iron, gold, diamond, mithril
+        return base;
     }
 
     function mine() {
@@ -350,7 +362,6 @@
         let chances = getOreChances(pickLevel);
         let r = Math.random() * 100;
         let count = buffDoubleOre ? 2 : 1;
-        // множитель кирки
         let pickMultiplier = 1;
         if (Math.random() < pick.multiChance) {
             pickMultiplier = Math.floor(Math.random() * pick.maxMulti) + 1;
@@ -363,7 +374,6 @@
         else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
         else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
-        // особые бонусы кирок
         if (pick.bonus === 'Энергоотдача (+5 макс. энергии)' && !PICKAXES[25].applied) {
             maxEnergy += 5;
             PICKAXES[25].applied = true;
@@ -372,7 +382,6 @@
             buffDoubleSell = true; buffDoubleSellEnd = Date.now() + 30000;
             addLog('🔥 Золотая лихорадка! 3x продажа на 30с!');
         }
-        // вибрация
         try {
             if (window.navigator && window.navigator.vibrate) {
                 window.navigator.vibrate(35 * count);
@@ -401,7 +410,6 @@
         saveGame(); updateUI();
     }
 
-    // ---------- КУПИТЬ ЭНЕРГИЮ ----------
     function buyEnergy() {
         if (coins < 50) { addLog('Не хватает монет!'); return; }
         if (energy >= maxEnergy) { addLog('Энергия полна!'); return; }
@@ -468,6 +476,29 @@
         if (prize === 'Алмаз в инвентарь') { inventory.diamond++; totalDiamondFound = true; }
         if (prize === 'Мифрил') inventory.mithril++;
         addLog(LANG[lang].wheelPrize + prize);
+        saveGame(); updateUI();
+    }
+
+    // ---------- ИНВЕСТИЦИИ ----------
+    function invest() {
+        let amount = parseInt(document.getElementById('investAmount').value);
+        if (isNaN(amount) || amount <= 0) {
+            addLog(LANG[lang].investError);
+            return;
+        }
+        if (coins < amount) {
+            addLog(LANG[lang].investNoMoney);
+            return;
+        }
+        let success = Math.random() < 0.5;
+        if (success) {
+            coins += amount;
+            addLog(LANG[lang].investWin + amount + ' монет');
+        } else {
+            coins -= amount;
+            addLog(LANG[lang].investLose + amount + ' монет');
+        }
+        document.getElementById('investAmount').value = '';
         saveGame(); updateUI();
     }
 

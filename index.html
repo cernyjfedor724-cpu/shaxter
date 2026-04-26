@@ -159,7 +159,14 @@
         if (saved) {
             try {
                 let d = JSON.parse(saved);
-                coins = d.coins; energy = d.energy; maxEnergy = d.maxEnergy; pickLevel = d.pickLevel; totalOre = d.totalOre; totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
+                coins = d.coins ?? 150;
+                if (isNaN(coins)) coins = 150;
+                energy = d.energy ?? 20;
+                maxEnergy = d.maxEnergy ?? 20;
+                pickLevel = d.pickLevel ?? 2;
+                totalOre = d.totalOre ?? 0;
+                totalStone = d.totalStone || 0;
+                totalDiamondFound = d.totalDiamondFound || false;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 upgradeCost = d.upgradeCost || 200;
                 lastTimestamp = d.lastTimestamp || Date.now();
@@ -186,6 +193,9 @@
     }
 
     function updateUI() {
+        // защита от NaN
+        if (isNaN(coins)) coins = 150;
+
         document.getElementById('coins').innerText = coins;
         document.getElementById('energy').innerText = energy;
         document.getElementById('maxEnergy').innerText = maxEnergy;

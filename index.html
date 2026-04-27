@@ -87,6 +87,28 @@
         .chances {
             font-size: 12px; color: #aaa; margin: 3px 0;
         }
+        .stat-line {
+            font-size: 14px; color: #ccc; margin: 3px 0;
+        }
+        /* Всплывающие цифры */
+        .float-text {
+            position: fixed;
+            font-size: 28px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 1000;
+            animation: floatUp 0.8s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-60px); }
+        }
+        /* Цвета редкости кирок */
+        .pick-common { color: #ffffff; }
+        .pick-rare { color: #2ecc71; }
+        .pick-epic { color: #3498db; }
+        .pick-legendary { color: #9b59b6; }
+        .pick-mythic { color: #f1c40f; text-shadow: 0 0 5px #f1c40f; }
     </style>
 </head>
 <body>
@@ -95,6 +117,8 @@
     💰 <span id="coins">150</span> 🪙<br>
     🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>)<br>
     <div class="chances" id="pickChances"></div>
+    <div class="stat-line">⏱️ В шахте: <span id="playTime">0</span></div>
+    <div class="stat-line">👆 Кликов: <span id="totalClicks">0</span></div>
     ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
@@ -121,7 +145,7 @@
 </div>
 
 <div id="panelMine" class="panel">
-    <button id="mineBtn" onclick="mine()">⛏️ Копать</button>
+    <button id="mineBtn" onclick="mine(event)">⛏️ Копать</button>
     <div id="pickUpgradeCost" style="font-size:12px; color:#aaa;"></div>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
@@ -164,7 +188,7 @@
 <div id="panelPets" class="panel hidden">
     <h3 id="petsTitle">🐾 Питомцы</h3>
     <div class="pet-card">
-        <strong>🍵 <span id="pet1Name">Белый чай</span></strong> — <span id="pet1Desc">пассивно приносит +1 монету каждые 10 секунд</span><br>
+        <strong>🍵 <span id="pet1Name">Белый чай</span></strong> — <span id="pet1Desc">пассивно приносит +1 монету каждую секунду</span><br>
         <span id="pet1Status">Не куплен</span>
         <button onclick="buyPet('pet1')" id="buyPet1Btn">Купить за 500🪙</button>
         <button onclick="upgradePet('pet1')" id="upgradePet1Btn" style="display:none;">Улучшить (1000🪙)</button>
@@ -209,7 +233,7 @@
             investWin: '📈 Инвестиция успешна! +', investLose: '📉 Инвестиция провалилась! -',
             investError: 'Введите корректную сумму', investNoMoney: 'Недостаточно монет',
             petsTitle: '🐾 Питомцы',
-            pet1Name: 'Белый чай', pet1Desc: 'пассивно приносит +1 монету каждые 10 секунд',
+            pet1Name: 'Белый чай', pet1Desc: 'пассивно приносит +1 монету каждую секунду',
             pet2Name: 'Пупуня', pet2Desc: 'увеличивает шанс редкой руды на 5%',
             petBuy: 'Купить за', petUpgrade: 'Улучшить',
             petStatusNotBought: 'Не куплен', petStatusBought: 'Куплен (ур.',
@@ -236,7 +260,7 @@
             investWin: '📈 Investment won! +', investLose: '📉 Investment lost! -',
             investError: 'Enter a valid amount', investNoMoney: 'Not enough coins',
             petsTitle: '🐾 Pets',
-            pet1Name: 'White Tea', pet1Desc: 'passively gives +1 coin every 10 seconds',
+            pet1Name: 'White Tea', pet1Desc: 'passively gives +1 coin every second',
             pet2Name: 'Pupunya', pet2Desc: 'increases rare ore chance by 5%',
             petBuy: 'Buy for', petUpgrade: 'Upgrade',
             petStatusNotBought: 'Not bought', petStatusBought: 'Bought (lvl.',
@@ -254,6 +278,7 @@
 
     // ---------- БАЗОВЫЕ ПЕРЕМЕННЫЕ ----------
     let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false, totalMithril = 0, totalEnergySpent = 0;
+    let totalClicks = 0, totalPlayTime = 0; // секунд
     let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
     let lastTimestamp = Date.now();
     let buffDoubleOre = false, buffDoubleOreEnd = 0;
@@ -294,9 +319,20 @@
         });
     }
 
+    // ---------- ВСПЛЫВАЮЩИЕ ЦИФРЫ ----------
+    function showFloatingText(text, x, y) {
+        const el = document.createElement('div');
+        el.className = 'float-text';
+        el.textContent = text;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
     // ---------- ФУНКЦИИ СОХРАНЕНИЯ ----------
     function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, inventory, lastTimestamp: Date.now(), pets };
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, lastTimestamp: Date.now(), pets };
         localStorage.setItem('shakhter_save', JSON.stringify(data));
     }
 
@@ -310,6 +346,8 @@
                 pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
                 totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
                 totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
+                totalClicks = d.totalClicks || 0;
+                totalPlayTime = d.totalPlayTime || 0;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 lastTimestamp = d.lastTimestamp || Date.now();
                 if (d.pets) {
@@ -324,6 +362,7 @@
 
     function resetGame() {
         coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
+        totalClicks = 0; totalPlayTime = 0;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         lastTimestamp = Date.now();
         pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0 };
@@ -357,6 +396,19 @@
         document.getElementById('mithril').innerText = inventory.mithril;
         document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
         document.getElementById('pickUpgradeCost').innerText = pickLevel >= 100 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
+
+        // Время и клики
+        document.getElementById('playTime').innerText = formatTime(totalPlayTime);
+        document.getElementById('totalClicks').innerText = totalClicks;
+
+        // Цвет редкости кирки
+        let pickColor = 'pick-common';
+        if (pickLevel <= 5) pickColor = 'pick-common';
+        else if (pickLevel <= 20) pickColor = 'pick-rare';
+        else if (pickLevel <= 50) pickColor = 'pick-epic';
+        else if (pickLevel <= 80) pickColor = 'pick-legendary';
+        else pickColor = 'pick-mythic';
+        document.getElementById('pickName').className = pickColor;
 
         // Показываем шансы
         let chances = getOreChances(pickLevel);
@@ -414,6 +466,13 @@
         document.getElementById('ach3').className = coins >= 1000 ? 'achievement unlocked' : 'achievement locked';
         document.getElementById('ach4').className = totalMithril >= 5 ? 'achievement unlocked' : 'achievement locked';
         document.getElementById('ach5').className = totalEnergySpent >= 1000 ? 'achievement unlocked' : 'achievement locked';
+    }
+
+    function formatTime(sec) {
+        let h = Math.floor(sec / 3600);
+        let m = Math.floor((sec % 3600) / 60);
+        let s = sec % 60;
+        return `${h}ч ${m}м ${s}с`;
     }
 
     function updatePetUI(petKey) {
@@ -478,12 +537,12 @@
         return base; // stone, iron, gold, diamond, mithril
     }
 
-    // ГАРАНТИРОВАННО РАБОТАЮЩАЯ КНОПКА КОПАТЬ
-    function mine() {
+    function mine(event) {
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
         if (energy < pick.energyCost) { addLog(LANG[lang].logNoEnergy); return; }
         energy -= pick.energyCost;
         totalEnergySpent += pick.energyCost;
+        totalClicks++;
         let chances = getOreChances(pickLevel);
         let r = Math.random() * 100;
         let count = buffDoubleOre ? 2 : 1;
@@ -499,6 +558,15 @@
         else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
         else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
+
+        // Всплывающая цифра
+        if (event) {
+            let rect = event.target.getBoundingClientRect();
+            let x = rect.left + rect.width / 2 - 30;
+            let y = rect.top - 30;
+            showFloatingText('+' + count + ' ' + ore, x, y);
+        }
+
         try { if (window.navigator?.vibrate) navigator.vibrate(35 * count); } catch(e) {}
         addLog(`${LANG[lang].logMined} ${ore} x${count}`);
         saveGame(); updateUI();
@@ -550,8 +618,9 @@
         if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
         if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
         showActiveBuffs();
+        // Питомец "Белый чай" — даёт по 1 монете каждую секунду (умножается на уровень)
         if (pets.pet1.owned && pets.pet1.level > 0) {
-            let interval = 10000;
+            let interval = 1000; // 1 секунда
             if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
             if (now - pets.pet1.lastPaid >= interval) {
                 coins += 1 * pets.pet1.level;
@@ -585,6 +654,13 @@
         }
         updateMarketDisplay();
     }, 600000);
+
+    // Счётчик времени игры (каждую секунду +1)
+    setInterval(() => {
+        totalPlayTime++;
+        saveGame();
+        document.getElementById('playTime').innerText = formatTime(totalPlayTime);
+    }, 1000);
 
     // ---------- КОЛЕСО ФОРТУНЫ ----------
     function spinWheel() {

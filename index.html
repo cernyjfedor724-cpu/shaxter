@@ -3,238 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⛏️ Miner Evolution</title>
-
+<title>⛏️ Шахтёр PRO MAX</title>
 <style>
-body{margin:0;font-family:Arial;background:#1b1b1b;color:white;text-align:center}
-.panel{display:none;padding:10px}
-.active{display:block}
-button{margin:5px;padding:10px;border:0;border-radius:10px;background:#333;color:white}
+body{margin:0;font-family:Arial;background:#111;color:#fff;text-align:center}
+.panel{padding:10px}
+button{padding:10px;margin:5px;border:none;border-radius:10px;background:#333;color:#fff;width:90%}
+.hidden{display:none}
 .tab{display:flex;flex-wrap:wrap}
-.tab button{flex:1;min-width:80px}
-.box{background:#2a2a2a;margin:5px;padding:10px;border-radius:10px}
+.tab button{flex:1}
+.stat{background:#222;margin:5px;padding:10px;border-radius:10px}
 </style>
 </head>
-
 <body>
 
-<h2>⛏️ Miner Evolution</h2>
-
-<div class="box">
+<div class="stat">
 💰 <span id="coins">0</span> |
-⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span><br>
-⛏️ <span id="pickName">Каменная кирка</span>
+⛏️ <span id="pick">1</span> кирка |
+⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span>
 </div>
 
 <div class="tab">
-<button onclick="show('mine')">Шахта</button>
-<button onclick="show('shop')">Магазин</button>
-<button onclick="show('pets')">Питомцы</button>
-<button onclick="show('fortune')">Азарт</button>
+<button onclick="tab('mine')">⛏️ Шахта</button>
+<button onclick="tab('shop')">🛒 Магазин</button>
+<button onclick="tab('pets')">🐾 Питомцы</button>
+<button onclick="tab('other')">🎡 Азарт</button>
 </div>
 
-<!-- ШАХТА -->
-<div id="mine" class="panel active">
-
+<!-- MINE -->
+<div id="mine">
 <button onclick="mine()">⛏️ Копать</button>
-<button onclick="sell()">💰 Продать</button>
-
-<div class="box">
-🪨 <span id="stone">0</span>
-⚙️ <span id="iron">0</span>
-🥇 <span id="gold">0</span>
-💎 <span id="diamond">0</span>
-💠 <span id="mithril">0</span>
+<button onclick="upgrade()">🔨 Улучшить кирку</button>
+<div id="log"></div>
 </div>
 
-<button onclick="upgradePick()">🔨 Улучшить кирку</button>
-
+<!-- SHOP -->
+<div id="shop" class="hidden">
+<button onclick="sell()">💰 Продать всё</button>
+<button onclick="buyEnergy()">⚡ Энергия (50)</button>
 </div>
 
-<!-- МАГАЗИН -->
-<div id="shop" class="panel">
-<button onclick="buyEnergy()">⚡ восстановить энергию (50)</button>
+<!-- PETS -->
+<div id="pets" class="hidden">
+<h3>🍵 Белый чай</h3>
+<p>редкая руда ↑</p>
+<button onclick="petUp('tea')">улучшить</button>
+
+<h3>🐾 Пупуня</h3>
+<p>монеты ↑</p>
+<button onclick="petUp('pu')">улучшить</button>
 </div>
 
-<!-- ПИТОМЦЫ -->
-<div id="pets" class="panel">
-
-<div class="box">
-🍵 Белый чай lvl <span id="p1">0</span><br>
-<button onclick="buyP1()">Улучшить</button>
-</div>
-
-<div class="box">
-🐶 Пупуня lvl <span id="p2">0</span><br>
-<button onclick="buyP2()">Улучшить</button>
-</div>
-
-</div>
-
-<!-- ФОРТУНА -->
-<div id="fortune" class="panel">
-<button onclick="spin()">🎡 100 монет</button>
+<!-- OTHER -->
+<div id="other" class="hidden">
+<button onclick="spin()">🎡 колесо (50)</button>
 </div>
 
 <script>
 
-// ====== ДАННЫЕ ======
-let coins=100;
-let energy=100;
-let maxEnergy=100;
+let coins=100
+let energy=100
+let maxEnergy=100
+let pickLevel=1
 
-let inv={stone:0,iron:0,gold:0,diamond:0,mithril:0};
+let inv={stone:0,iron:0,gold:0,diamond:0,mithril:0}
 
-let pickLevel=1;
-
-let pets={p1:0,p2:0};
-
-// ====== КИРКА ======
-function getPick(){
-  return {
-    name:"Кирка ур."+pickLevel,
-    energy:1+Math.floor(pickLevel/5),
-    rare:pickLevel*0.002
-  };
+let pets={
+tea:{lvl:0},
+pu:{lvl:0}
 }
 
-// ====== МАЙН ======
-function mine(){
-  let p=getPick();
-  if(energy<p.energy)return;
-
-  energy-=p.energy;
-
-  let r=Math.random();
-  let bonusRare=pets.p2*0.05;
-
-  if(r<0.5-bonusRare) inv.stone++;
-  else if(r<0.7) inv.iron++;
-  else if(r<0.85) inv.gold++;
-  else if(r<0.95+bonusRare) inv.diamond++;
-  else inv.mithril++;
-
-  coins += pets.p1; // белый чай
-
-  save(); update();
+// ---------- 100 КИРОК ----------
+let PICKAXES=[]
+for(let i=1;i<=100;i++){
+PICKAXES.push({
+lvl:i,
+energy:Math.min(2+Math.floor(i/7),15),
+rare:i*0.4
+})
 }
 
-// ====== ПРОДАЖА ======
-function sell(){
-  let sum =
-  inv.stone*1+
-  inv.iron*5+
-  inv.gold*20+
-  inv.diamond*100+
-  inv.mithril*300;
-
-  coins+=sum;
-  inv={stone:0,iron:0,gold:0,diamond:0,mithril:0};
-
-  save(); update();
-}
-
-// ====== УЛУЧШЕНИЕ КИРКИ ======
-function upgradePick(){
-  let cost=pickLevel*50;
-  if(coins<cost)return;
-
-  coins-=cost;
-  pickLevel++;
-
-  if(maxEnergy<200 && pickLevel%10==0) maxEnergy+=10;
-
-  save(); update();
-}
-
-// ====== ПИТОМЦЫ ======
-function buyP1(){
-  let cost=100*(pets.p1+1);
-  if(coins<cost)return;
-  coins-=cost;
-  pets.p1++;
-  save(); update();
-}
-
-function buyP2(){
-  let cost=200*(pets.p2+1);
-  if(coins<cost)return;
-  coins-=cost;
-  pets.p2++;
-  save(); update();
-}
-
-// ====== ЭНЕРГИЯ ======
-function buyEnergy(){
-  coins-=50;
-  energy=maxEnergy;
-  save(); update();
-}
-
-// ====== ФОРТУНА ======
-function spin(){
-  if(coins<100)return;
-  coins-=100;
-
-  let r=Math.random();
-  if(r<0.25) coins+=200;
-  else if(r<0.5) inv.diamond++;
-  else if(r<0.75) energy=maxEnergy;
-  else inv.mithril++;
-
-  save(); update();
-}
-
-// ====== UI ======
-function update(){
-
-document.getElementById("coins").innerText=coins;
-document.getElementById("energy").innerText=energy;
-document.getElementById("maxEnergy").innerText=maxEnergy;
-
-let p=getPick();
-document.getElementById("pickName").innerText=p.name;
-
-document.getElementById("stone").innerText=inv.stone;
-document.getElementById("iron").innerText=inv.iron;
-document.getElementById("gold").innerText=inv.gold;
-document.getElementById("diamond").innerText=inv.diamond;
-document.getElementById("mithril").innerText=inv.mithril;
-
-document.getElementById("p1").innerText=pets.p1;
-document.getElementById("p2").innerText=pets.p2;
-
-}
-
-// ====== TAB ======
-function show(id){
-document.querySelectorAll(".panel").forEach(e=>e.classList.remove("active"));
-document.getElementById(id).classList.add("active");
-}
-
-// ====== SAVE ======
+// ---------- SAVE ----------
 function save(){
-localStorage.setItem("g",JSON.stringify({
-coins,energy,maxEnergy,inv,pickLevel,pets
-}));
+localStorage.setItem("g",JSON.stringify({coins,energy,maxEnergy,pickLevel,inv,pets}))
 }
-
 function load(){
-let d=JSON.parse(localStorage.getItem("g"));
-if(!d)return;
+let d=JSON.parse(localStorage.getItem("g"))
+if(d){
+coins=d.coins
+energy=d.energy
+maxEnergy=d.maxEnergy
+pickLevel=d.pickLevel
+inv=d.inv
+pets=d.pets
+}
+}
+load()
 
-coins=d.coins;
-energy=d.energy;
-maxEnergy=d.maxEnergy;
-inv=d.inv;
-pickLevel=d.pickLevel;
-pets=d.pets;
+function update(){
+document.getElementById("coins").innerText=coins
+document.getElementById("energy").innerText=energy
+document.getElementById("maxEnergy").innerText=maxEnergy
+document.getElementById("pick").innerText=pickLevel
+}
+setInterval(update,500)
+
+// ---------- РЕДКОСТЬ ----------
+function rare(){
+return pickLevel*0.3 + pets.tea.lvl*2
 }
 
-load();
-update();
+// ---------- КОПКА ----------
+function mine(){
+
+let pick=PICKAXES[pickLevel-1]
+
+if(energy<pick.energy){
+log("нет энергии")
+return
+}
+
+energy-=pick.energy
+
+let r=Math.random()*100 + rare()
+let c=1
+
+if(r<60){
+inv.stone++
+log("камень")
+}
+else if(r<80){
+inv.iron++
+log("железо")
+}
+else if(r<90){
+inv.gold++
+log("золото")
+}
+else if(r<97){
+inv.diamond++
+log("алмаз")
+}
+else{
+inv.mithril++
+log("МИФРИЛ")
+}
+
+save()
+}
+
+// ---------- УЛУЧШЕНИЕ КИРКИ ----------
+function upgrade(){
+
+if(pickLevel>=100){
+log("макс кирка")
+return
+}
+
+let cost=pickLevel*100
+
+if(coins<cost){
+log("нет денег")
+return
+}
+
+coins-=cost
+pickLevel++
+maxEnergy+=5
+energy=maxEnergy
+
+log("новая кирка lvl "+pickLevel)
+
+save()
+}
+
+// ---------- ПРОДАЖА ----------
+function sell(){
+
+let m=
+inv.stone*1+
+inv.iron*5+
+inv.gold*15+
+inv.diamond*50+
+inv.mithril*200
+
+m*=1+pets.pu.lvl*0.2
+
+coins+=m
+inv={stone:0,iron:0,gold:0,diamond:0,mithril:0}
+
+log("продано "+m)
+save()
+}
+
+// ---------- ЭНЕРГИЯ ----------
+function buyEnergy(){
+if(coins<50)return
+coins-=50
+energy=maxEnergy
+save()
+}
+
+// ---------- ПИТОМЦЫ ----------
+function petUp(p){
+if(coins<200)return
+coins-=200
+pets[p].lvl++
+save()
+}
+
+// ---------- КОЛЕСО ----------
+function spin(){
+if(coins<50)return
+coins-=50
+
+let r=Math.random()
+
+if(r<0.3)coins+=100
+else if(r<0.6)energy=maxEnergy
+else inv.diamond++
+
+save()
+}
+
+// ---------- TAB ----------
+function tab(t){
+["mine","shop","pets","other"].forEach(x=>{
+document.getElementById(x).classList.add("hidden")
+})
+document.getElementById(t).classList.remove("hidden")
+}
+
+// ---------- LOG ----------
+function log(t){
+document.getElementById("log").innerText=t
+}
 
 </script>
-
 </body>
 </html>

@@ -6,9 +6,11 @@
 <title>⛏️ Шахтёр</title>
 
 <style>
-body{background:#1a1a1a;color:#fff;font-family:Arial;text-align:center;margin:0;padding:10px;}
-.panel{background:#2a2a2a;border-radius:12px;padding:10px;margin:5px 0;}
-button{padding:10px;margin:5px;border-radius:10px;border:none;background:#444;color:#fff;width:90%;}
+body{background:#1a1a1a;color:#eee;font-family:Arial;margin:0;padding:10px;text-align:center;}
+.panel{background:#2a2a2a;border-radius:12px;padding:10px;margin:6px 0;}
+button{padding:10px;margin:4px;border:none;border-radius:10px;background:#444;color:#fff;width:90%;}
+.tab{display:flex;flex-wrap:wrap;}
+.tab button{flex:1;}
 .hidden{display:none;}
 </style>
 </head>
@@ -17,25 +19,49 @@ button{padding:10px;margin:5px;border-radius:10px;border:none;background:#444;co
 
 <div class="panel">
 💰 <span id="coins"></span><br>
+🔨 Ур. <span id="pickLevel"></span><br>
 ⚡ <span id="energy"></span>/<span id="maxEnergy"></span>
 </div>
 
-<div class="panel">
+<div class="tab">
+<button onclick="tab('mine')">⛏️</button>
+<button onclick="tab('market')">📈</button>
+<button onclick="tab('shop')">🛒</button>
+<button onclick="tab('fortune')">🎡</button>
+<button onclick="tab('pets')">🐾</button>
+<button onclick="tab('ach')">🏆</button>
+</div>
+
+<div id="mine" class="panel">
 <button onclick="mine()">⛏️ Копать</button>
-<button onclick="sellAll()">💰 Продать всё</button>
-<button onclick="upgradePick()">🔨 Кирка</button>
-<button onclick="spin()">🎡 Фортуна</button>
+<button onclick="sellAll()">💰 Продать</button>
+<button onclick="upgradePick()">🔨 Улучшить</button>
+<button onclick="buyEnergy()">⚡ Энергия</button>
 </div>
 
-<div class="panel">
-<h3>🐾 Питомцы</h3>
-<button onclick="buyPet()">Купить питомца (500)</button>
-<div id="petInfo"></div>
+<div id="market" class="panel hidden"></div>
+
+<div id="shop" class="panel hidden">
+<button onclick="buyBuff('ore')">x2 руда (150)</button>
+<button onclick="buyBuff('sell')">x2 продажа (200)</button>
+<div id="buffs"></div>
 </div>
 
-<div class="panel">
-<h3>📈 Рынок</h3>
-<div id="market"></div>
+<div id="fortune" class="panel hidden">
+<button onclick="spin()">🎡 100</button>
+<input id="inv" placeholder="сумма">
+<button onclick="invest()">инвест</button>
+</div>
+
+<div id="pets" class="panel hidden">
+<button onclick="buyPet('p1')">чай (500)</button>
+<button onclick="buyPet('p2')">пупуня (800)</button>
+<div id="petsInfo"></div>
+</div>
+
+<div id="ach" class="panel hidden">
+<div id="ach1">❌ 10 камня</div>
+<div id="ach2">❌ алмаз</div>
 </div>
 
 <div id="log"></div>
@@ -44,66 +70,71 @@ button{padding:10px;margin:5px;border-radius:10px;border:none;background:#444;co
 
 // --- ДАННЫЕ ---
 let coins=150,energy=100,maxEnergy=100,pickLevel=1;
-let inventory={stone:0,iron:0,gold:0,diamond:0,mithril:0};
+let inv={stone:0,iron:0,gold:0,diamond:0,mithril:0};
+let totalStone=0,diamondFound=false;
 
-let pet={owned:false,level:0,last:0};
+let buffs={ore:false,sell:false,oreEnd:0,sellEnd:0};
+
+let pets={
+p1:{owned:false,lvl:0,last:0},
+p2:{owned:false,lvl:0}
+};
 
 let market={stone:2,iron:8,gold:25,diamond:100,mithril:50};
 
 // --- СОХРАНЕНИЕ ---
 function save(){
-localStorage.setItem("game",JSON.stringify({coins,energy,maxEnergy,pickLevel,inventory,pet,market}));
+localStorage.setItem("miner",JSON.stringify({coins,energy,maxEnergy,pickLevel,inv,pets,market,totalStone,diamondFound}));
 }
-
 function load(){
-let d=JSON.parse(localStorage.getItem("game"));
+let d=JSON.parse(localStorage.getItem("miner"));
 if(!d)return;
-coins=d.coins||150;
-energy=d.energy||100;
-maxEnergy=d.maxEnergy||100;
-pickLevel=d.pickLevel||1;
-inventory=d.inventory||inventory;
-pet=d.pet||pet;
-market=d.market||market;
+Object.assign(window,d);
 }
 
 // --- UI ---
 function update(){
 coins=Math.max(0,coins);
 
-document.getElementById("coins").innerText=coins;
-document.getElementById("energy").innerText=energy;
-document.getElementById("maxEnergy").innerText=maxEnergy;
+coinsEl.innerText=coins;
+energyEl.innerText=energy;
+maxEnergyEl.innerText=maxEnergy;
+pickLevelEl.innerText=pickLevel;
 
-document.getElementById("petInfo").innerText=
-pet.owned ? "Уровень: "+pet.level : "Нет питомца";
+let m="";
+for(let k in market) m+=k+": "+market[k]+"<br>";
+marketEl.innerHTML=m;
 
-let html="";
-for(let k in market){
-html+=k+": "+market[k]+"<br>";
+petsInfo.innerText=
+(pets.p1.owned?"чай lvl "+pets.p1.lvl:"")+"\n"+
+(pets.p2.owned?"пупуня lvl "+pets.p2.lvl:"");
+
+ach1.innerText=(totalStone>=10?"✅":"❌")+" 10 камня";
+ach2.innerText=(diamondFound?"✅":"❌")+" алмаз";
 }
-document.getElementById("market").innerHTML=html;
-}
 
-// --- ЛОГ ---
-function log(t){document.getElementById("log").innerText=t;}
+// --- ТАБЫ ---
+function tab(t){
+["mine","market","shop","fortune","pets","ach"]
+.forEach(x=>document.getElementById(x).classList.add("hidden"));
+document.getElementById(t).classList.remove("hidden");
+}
 
 // --- КОПКА ---
 function mine(){
-if(energy<=0){log("Нет энергии");return;}
-
+if(energy<=0){log("нет энергии");return;}
 energy--;
 
+let count=buffs.ore?2:1;
+
 let r=Math.random()*100;
-let ore="";
+if(r<50){inv.stone+=count;totalStone+=count;}
+else if(r<75){inv.iron+=count;}
+else if(r<90){inv.gold+=count;}
+else if(r<97){inv.diamond+=count;diamondFound=true;}
+else inv.mithril+=count;
 
-if(r<50){inventory.stone++;}
-else if(r<75){inventory.iron++;}
-else if(r<90){inventory.gold++;}
-else if(r<97){inventory.diamond++;}
-else {inventory.mithril++;}
-
-log("Добыча...");
+log("добыча");
 
 save();update();
 }
@@ -111,67 +142,92 @@ save();update();
 // --- ПРОДАЖА ---
 function sellAll(){
 let total=
-inventory.stone*market.stone+
-inventory.iron*market.iron+
-inventory.gold*market.gold+
-inventory.diamond*market.diamond+
-inventory.mithril*market.mithril;
+inv.stone*market.stone+
+inv.iron*market.iron+
+inv.gold*market.gold+
+inv.diamond*market.diamond+
+inv.mithril*market.mithril;
+
+if(buffs.sell) total*=2;
 
 coins+=total;
-inventory={stone:0,iron:0,gold:0,diamond:0,mithril:0};
+inv={stone:0,iron:0,gold:0,diamond:0,mithril:0};
 
-log("Продано: "+total);
+log("+"+total);
 
 save();update();
 }
 
 // --- КИРКА ---
 function upgradePick(){
-let cost=pickLevel*200;
-
-if(coins<cost){log("Нет денег");return;}
-
-coins-=cost;
-pickLevel++;
-
+let cost=pickLevel*300;
+if(coins<cost){log("нет денег");return;}
+coins-=cost;pickLevel++;
 save();update();
 }
 
-// --- ПИТОМЕЦ ---
-function buyPet(){
-if(pet.owned){log("Уже есть");return;}
-if(coins<500){log("Нет денег");return;}
+// --- ЭНЕРГИЯ ---
+function buyEnergy(){
+if(coins<50)return;
+coins-=50;energy=maxEnergy;
+save();update();
+}
+setInterval(()=>{if(energy<maxEnergy)energy++;update();},3000);
 
-coins-=500;
-pet.owned=true;
-pet.level=1;
-pet.last=Date.now();
-
+// --- БАФФЫ ---
+function buyBuff(t){
+if(t==="ore" && coins>=150){
+coins-=150;buffs.ore=true;buffs.oreEnd=Date.now()+30000;
+}
+if(t==="sell" && coins>=200){
+coins-=200;buffs.sell=true;buffs.sellEnd=Date.now()+30000;
+}
 save();update();
 }
 
-// пассивный доход
 setInterval(()=>{
-if(pet.owned){
-if(Date.now()-pet.last>5000){
-coins+=pet.level;
-pet.last=Date.now();
-}
-}
+let now=Date.now();
+if(buffs.ore && now>buffs.oreEnd) buffs.ore=false;
+if(buffs.sell && now>buffs.sellEnd) buffs.sell=false;
 },1000);
 
 // --- ФОРТУНА ---
 function spin(){
-if(coins<100){log("Нет денег");return;}
+if(coins<100)return;
 coins-=100;
-
-let r=Math.random();
-
-if(r<0.5){coins+=200; log("Выигрыш 200");}
-else{log("Проигрыш");}
-
+if(Math.random()<0.5) coins+=200;
 save();update();
 }
+
+// --- ИНВЕСТ ---
+function invest(){
+let a=parseInt(invInput.value);
+if(!a||coins<a)return;
+if(Math.random()<0.5) coins+=a;
+else coins-=a;
+invInput.value="";
+save();update();
+}
+
+// --- ПИТОМЦЫ ---
+function buyPet(k){
+let cost=k==="p1"?500:800;
+if(coins<cost)return;
+coins-=cost;
+pets[k].owned=true;
+pets[k].lvl=1;
+pets[k].last=Date.now();
+save();update();
+}
+
+setInterval(()=>{
+if(pets.p1.owned){
+if(Date.now()-pets.p1.last>5000){
+coins+=pets.p1.lvl;
+pets.p1.last=Date.now();
+}
+}
+},1000);
 
 // --- РЫНОК ---
 setInterval(()=>{
@@ -181,11 +237,8 @@ market[k]=Math.max(1,Math.round(market[k]*(0.8+Math.random()*0.4)));
 update();
 },10000);
 
-// --- ЭНЕРГИЯ ---
-setInterval(()=>{
-if(energy<maxEnergy)energy++;
-update();
-},3000);
+// --- ЛОГ ---
+function log(t){document.getElementById("log").innerText=t;}
 
 // --- СТАРТ ---
 load();

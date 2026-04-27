@@ -3,21 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>⛏️ Шахтёр</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>⛏️ 100 кирок</title>
 
 <style>
-body { background:#1a1a1a; color:#e0e0e0; font-family:Arial; margin:0; padding:10px; text-align:center; }
-body.light { background:#f0f0f0; color:#222; }
-.stats,.panel { background:#2a2a2a; border-radius:15px; padding:15px; margin:5px 0; }
-body.light .stats, body.light .panel { background:#fff; }
-button { background:#3a3a3a; color:#fff; border:none; padding:12px; margin:4px; border-radius:12px; width:90%; }
-#mineBtn { background:#c4450c; font-size:20px; }
-.hidden { display:none; }
-.energy-bar{height:14px;background:#333;border-radius:8px;overflow:hidden}
-.energy-fill{height:100%;background:#f1c40f}
-.pet-card{background:#333;padding:10px;border-radius:10px;margin:8px 0}
-body.light .pet-card{background:#eee}
+body{background:#1a1a1a;color:#fff;font-family:Arial;text-align:center;margin:0;padding:10px}
+.stats,.panel{background:#2a2a2a;padding:12px;border-radius:12px;margin:6px 0}
+button{width:90%;padding:10px;margin:4px;border-radius:10px;border:none;background:#3a3a3a;color:#fff}
+#mineBtn{background:#c4450c;font-size:20px}
+.hidden{display:none}
+.kirka{background:#333;margin:6px;padding:10px;border-radius:10px}
 </style>
 </head>
 
@@ -25,150 +19,147 @@ body.light .pet-card{background:#eee}
 
 <div class="stats">
 💰 <span id="coins">150</span><br>
-⛏️ Кирка: <span id="pickName"></span> (ур <span id="pickLevel"></span>)<br>
+⛏️ Кирка: <span id="pickName"></span><br>
 ⚡ <span id="energy"></span>/<span id="maxEnergy"></span>
-<div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
 </div>
 
 <button id="mineBtn" onclick="mine()">⛏️ Копать</button>
+<button onclick="buyPick()">🛒 Купить следующую кирку</button>
 
-<div class="stats">
+<div class="panel">
+<h3>🎒 Инвентарь</h3>
 🗿 <span id="stone"></span> | ⚙️ <span id="iron"></span> | 💎 <span id="diamond"></span> | 💠 <span id="mithril"></span>
 </div>
 
 <div class="panel">
-<h3>🐾 Питомцы</h3>
-
-<div class="pet-card">
-<b>🍵 Белый чай</b><br>
-Шанс редкой руды +<span id="teaBonus">0</span>%<br>
-<button onclick="buyPet('pet1')">Купить</button>
-<button onclick="upgradePet('pet1')">Апгрейд</button>
-</div>
-
-<div class="pet-card">
-<b>🐾 Пупуня</b><br>
-Монеты +<span id="pupuBonus">0</span>%<br>
-<button onclick="buyPet('pet2')">Купить</button>
-<button onclick="upgradePet('pet2')">Апгрейд</button>
-</div>
-
+<h3>🔓 Кирки</h3>
+<div id="shop"></div>
 </div>
 
 <script>
-let coins=150,energy=100,maxEnergy=100,pickLevel=2;
+
+let coins=150;
+let energy=100;
+let maxEnergy=100;
+
+let currentPick=1;
 
 let inventory={stone:0,iron:0,diamond:0,mithril:0};
 
-let pets={
- pet1:{owned:false,level:0,base:500},
- pet2:{owned:false,level:0,base:800}
-};
+// 100 кирок
+let PICKS=[];
 
-const PICKS=[
-{energy:1},{energy:2},{energy:3},{energy:4},{energy:5},
-{energy:6},{energy:7},{energy:8},{energy:9},{energy:10}
-];
-
-// --- ШАНСЫ РУД ---
-function getChance(){
- let base=[70,20,8,2];
- base[2]+=pets.pet1.level*2; // чай
- base[3]+=pets.pet1.level*2;
- base[2]+=Math.min(10,Math.floor(pickLevel/10));
- base[3]+=Math.min(5,Math.floor(pickLevel/15));
- return base;
+for(let i=1;i<=100;i++){
+PICKS.push({
+id:i,
+name:"Кирка "+i,
+energyCost:1+Math.floor(i/10),
+power:1+i*0.15,
+rareBoost:Math.min(30,i*0.3)
+});
 }
 
-// --- МАЙН ---
+function getPick(){
+return PICKS[currentPick-1];
+}
+
 function mine(){
- let pick=PICKS[pickLevel-1];
- let cost=pick.energy+Math.floor(pickLevel/20);
 
- if(energy<cost) return;
+let pick=getPick();
 
- energy-=cost;
+if(energy<pick.energyCost) return;
 
- let r=Math.random()*100;
- let c=getChance();
+energy-=pick.energyCost;
 
- let count=1;
- if(Math.random()<0.2) count=2;
+let r=Math.random()*100;
 
- if(r<c[0]) inventory.stone+=count;
- else if(r<c[0]+c[1]) inventory.iron+=count;
- else if(r<c[0]+c[1]+c[2]) inventory.diamond+=count;
- else inventory.mithril+=count;
+let rareBonus=pick.rareBoost;
 
- update();
-}
+let chance=[70,20,8+rareBonus,2+rareBonus];
 
-// --- ПРОДАЖА ---
-function sellAll(){
- let total=
- inventory.stone*2+
- inventory.iron*8+
- inventory.diamond*100+
- inventory.mithril*50;
+if(r<chance[0]) inventory.stone++;
+else if(r<chance[0]+chance[1]) inventory.iron++;
+else if(r<chance[0]+chance[1]+chance[2]) inventory.diamond++;
+else inventory.mithril++;
 
- if(pets.pet2.owned)
- total*=1+pets.pet2.level*0.05;
-
- coins+=Math.floor(total);
-
- inventory={stone:0,iron:0,diamond:0,mithril:0};
- update();
-}
-
-// --- ПИТОМЦЫ ---
-function buyPet(p){
- let pet=pets[p];
- if(pet.owned) return;
-
- if(coins<pet.base) return;
-
- coins-=pet.base;
- pet.owned=true;
- pet.level=1;
- update();
-}
-
-function upgradePet(p){
- let pet=pets[p];
- if(!pet.owned) return;
-
- let cost=pet.base*(pet.level+1);
-
- if(coins<cost) return;
-
- coins-=cost;
- pet.level++;
-
- update();
-}
-
-// --- UI ---
-function update(){
- document.getElementById("coins").innerText=coins;
- document.getElementById("energy").innerText=energy;
- document.getElementById("maxEnergy").innerText=maxEnergy;
-
- document.getElementById("stone").innerText=inventory.stone;
- document.getElementById("iron").innerText=inventory.iron;
- document.getElementById("diamond").innerText=inventory.diamond;
- document.getElementById("mithril").innerText=inventory.mithril;
-
- document.getElementById("pickLevel").innerText=pickLevel;
- document.getElementById("pickName").innerText="Кирка "+pickLevel;
-
- document.getElementById("energyFill").style.width=(energy/maxEnergy*100)+"%";
-
- document.getElementById("teaBonus").innerText=pets.pet1.level*2;
- document.getElementById("pupuBonus").innerText=pets.pet2.level*5;
-}
-
-setInterval(()=>update(),500);
 update();
+}
+
+function buyPick(){
+if(currentPick>=100) return;
+
+let cost=currentPick*50;
+
+if(coins<cost) return;
+
+coins-=cost;
+currentPick++;
+
+updateShop();
+update();
+}
+
+function updateShop(){
+
+let html="";
+
+for(let i=0;i<PICKS.length;i++){
+
+let p=PICKS[i];
+
+html+=`
+<div class="kirka">
+<b>${p.name}</b><br>
+⚡ ${p.energyCost} | 💎 +${p.rareBoost.toFixed(1)}% редких<br>
+${i+1<=currentPick?"✅ открыта":"🔒 закрыта"}<br>
+</div>
+`;
+
+}
+
+document.getElementById("shop").innerHTML=html;
+
+}
+
+function mine(){
+
+let pick=getPick();
+
+if(energy<pick.energyCost) return;
+
+energy-=pick.energyCost;
+
+let r=Math.random()*100;
+
+let chance=[70,20,8+pick.rareBoost,2+pick.rareBoost];
+
+if(r<chance[0]) inventory.stone++;
+else if(r<chance[0]+chance[1]) inventory.iron++;
+else if(r<chance[0]+chance[1]+chance[2]) inventory.diamond++;
+else inventory.mithril++;
+
+update();
+}
+
+function update(){
+
+document.getElementById("coins").innerText=coins;
+document.getElementById("energy").innerText=energy;
+document.getElementById("maxEnergy").innerText=maxEnergy;
+
+document.getElementById("stone").innerText=inventory.stone;
+document.getElementById("iron").innerText=inventory.iron;
+document.getElementById("diamond").innerText=inventory.diamond;
+document.getElementById("mithril").innerText=inventory.mithril;
+
+document.getElementById("pickName").innerText=getPick().name;
+
+updateShop();
+}
+
+updateShop();
+update();
+
 </script>
 
 </body>

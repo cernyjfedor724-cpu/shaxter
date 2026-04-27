@@ -1,224 +1,140 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>⛏️ Шахтёр</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            background: #1a1a1a; color: #e0e0e0; font-family: Arial, sans-serif; margin: 0; padding: 10px; text-align: center;
-        }
-        .stats {
-            background: #2a2a2a; border-radius: 15px; padding: 15px; margin: 5px 0; font-size: 16px;
-        }
-        button {
-            background: #3a3a3a; color: #fff; border: none; padding: 12px 15px; margin: 4px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: bold; width: 90%;
-        }
-        #mineBtn {
-            background: #c4450c; font-size: 22px; padding: 15px;
-        }
-        .energy-bar {
-            background: #333; border-radius: 8px; height: 16px; margin: 5px 0; overflow: hidden;
-        }
-        .energy-fill {
-            background: #f1c40f; height: 100%; transition: width 0.3s;
-        }
-        #log {
-            margin: 10px 0; padding: 8px; background: #2a2a2a; border-radius: 10px; color: #f1c40f; font-size: 14px;
-        }
-        .badge {
-            font-size: 12px; color: #888;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⛏️ Шахтёр</title>
+
+<style>
+body { background:#1a1a1a;color:#fff;font-family:Arial;text-align:center;margin:0;padding:10px;}
+.stats,.panel{background:#2a2a2a;border-radius:15px;padding:10px;margin:5px 0;}
+button{padding:10px;margin:5px;border-radius:10px;border:none;background:#444;color:#fff;width:90%;}
+.hidden{display:none;}
+</style>
 </head>
+
 <body>
-<div class="stats">
-    <span class="badge" id="userIdDisplay"></span><br>
-    💰 <span id="coins">150</span> 🪙<br>
-    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>)<br>
-    ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
-    <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
-    <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
-    <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
-</div>
 
 <div class="stats">
-    <h3>🎒 Инвентарь</h3>
-    <div>🗿 Камень: <span id="stone">0</span></div>
-    <div>⚙️ Железо: <span id="iron">0</span></div>
-    <div>🥇 Золото: <span id="gold">0</span></div>
-    <div>💎 Алмазы: <span id="diamond">0</span></div>
-    <div>💠 Мифрил: <span id="mithril">0</span></div>
+💰 <span id="coins">150</span><br>
+⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span>
 </div>
 
-<button id="mineBtn" onclick="mine()">⛏️ Копать</button>
+<div class="panel">
+<button onclick="mine()">⛏️ Копать</button>
 <button onclick="sellAll()">💰 Продать всё</button>
 <button onclick="upgradePick()">🔨 Улучшить кирку</button>
-<button onclick="claimDaily()">🎁 Ежедневная награда</button>
+</div>
 
-<div id="log">Нажми "Копать", чтобы начать!</div>
-
-<div style="font-size:12px; color:#666; margin-top:10px;">Made by Fedor Chernyshev</div>
+<div id="log"></div>
 
 <script>
-    window.Telegram.WebApp.ready();
 
-    // Базовые переменные
-    let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0;
-    let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
-    let lastTimestamp = Date.now();
-    let lastDaily = localStorage.getItem('lastDaily') ? Number(localStorage.getItem('lastDaily')) : 0;
-    let market = { stone: 2, iron: 8, gold: 25, diamond: 100, mithril: 50 };
+// --- ДАННЫЕ ---
+let coins=150,energy=100,maxEnergy=100,pickLevel=1;
+let inventory={stone:0,iron:0,gold:0,diamond:0,mithril:0};
 
-    // 100 кирок
-    const PICKAXES = [];
-    for (let i = 1; i <= 100; i++) {
-        let cost = Math.min(10, Math.floor(i / 10) + 1);
-        let multiChance = Math.min(0.9, (i - 1) * 0.01);
-        let maxMulti = 2;
-        if (i >= 30) maxMulti = 3;
-        if (i >= 60) maxMulti = 5;
-        if (i >= 90) maxMulti = 10;
-        let names = ['Деревянная','Каменная','Железная','Золотая','Лазерный бур','Мифриловая','Адамантитовая','Обсидиановая','Кристальная','Титановая','Эльфийская','Гномья сталь','Рунная','Призрачная','Драконья кость','Изумрудная','Сапфировая','Рубиновая','Алмазная','Космический бур','Хронокирка','Квантовая','Тёмная материя','Нейтронная','Гравитационный молот','Антиматериальная','Плазменный резец','Звёздный сплав','Чёрная дыра'];
-        let name = names[Math.min(i-1, names.length-1)] + (i > names.length ? ` ${i}` : '');
-        PICKAXES.push({ level: i, name: name, energyCost: cost, multiChance: multiChance, maxMulti: maxMulti });
+// --- КИРКИ ---
+const PICKAXES=[];
+for(let i=1;i<=100;i++){
+    PICKAXES.push({
+        level:i,
+        energyCost:Math.min(10,Math.floor(i/10)+1),
+        multiChance:Math.min(0.9,(i-1)*0.01),
+        maxMulti: i>=90?10:i>=60?5:i>=30?3:2
+    });
+}
+
+// --- UI ---
+function updateUI(){
+    document.getElementById('coins').innerText=coins;
+    document.getElementById('energy').innerText=energy;
+    document.getElementById('maxEnergy').innerText=maxEnergy;
+}
+
+// --- ЛОГ ---
+function log(t){document.getElementById('log').innerText=t;}
+
+// --- ШАНСЫ ---
+function getChances(){
+    return [50,25,15,7,3]; // норм
+}
+
+// --- КОПКА ---
+function mine(){
+    let pick=PICKAXES.find(p=>p.level===pickLevel) || PICKAXES[0];
+
+    if(energy<pick.energyCost){
+        log("Нет энергии");
+        return;
     }
 
-    function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, inventory, lastTimestamp: Date.now() };
-        localStorage.setItem('shakhter_save', JSON.stringify(data));
+    energy-=pick.energyCost;
+
+    let chances=getChances();
+    let r=Math.random()*100;
+
+    let count=1;
+    if(Math.random()<pick.multiChance){
+        count=Math.floor(Math.random()*pick.maxMulti)+1;
     }
 
-    function loadGame() {
-        let saved = localStorage.getItem('shakhter_save');
-        if (saved) {
-            try {
-                let d = JSON.parse(saved);
-                coins = d.coins ?? 150; energy = d.energy ?? 100; maxEnergy = d.maxEnergy ?? 100;
-                pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
-                inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-                lastTimestamp = d.lastTimestamp || Date.now();
-            } catch(e) { resetGame(); }
-        } else { resetGame(); }
-        recoverEnergy();
-        updateUI();
-    }
+    let ore="";
 
-    function resetGame() {
-        coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0;
-        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-        lastTimestamp = Date.now();
-    }
+    if(r<chances[0]){inventory.stone+=count; ore="Камень";}
+    else if(r<75){inventory.iron+=count; ore="Железо";}
+    else if(r<90){inventory.gold+=count; ore="Золото";}
+    else if(r<97){inventory.diamond+=count; ore="Алмаз";}
+    else {inventory.mithril+=count; ore="Мифрил";}
 
-    function recoverEnergy() {
-        let now = Date.now();
-        let diff = Math.floor((now - lastTimestamp) / 1000);
-        let gained = Math.floor(diff / 900);
-        if (gained > 0) {
-            energy = Math.min(maxEnergy, energy + gained);
-            lastTimestamp = now - (diff % 900) * 1000;
-        }
-    }
+    log("Добыто: "+ore+" x"+count);
 
-    function updateUI() {
-        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
-        document.getElementById('coins').innerText = coins;
-        document.getElementById('energy').innerText = energy;
-        document.getElementById('maxEnergy').innerText = maxEnergy;
-        document.getElementById('pickName').innerText = pick.name;
-        document.getElementById('pickLevel').innerText = pickLevel;
-        document.getElementById('energyCost').innerText = pick.energyCost;
-        document.getElementById('totalOre').innerText = totalOre;
-        document.getElementById('stone').innerText = inventory.stone;
-        document.getElementById('iron').innerText = inventory.iron;
-        document.getElementById('gold').innerText = inventory.gold;
-        document.getElementById('diamond').innerText = inventory.diamond;
-        document.getElementById('mithril').innerText = inventory.mithril;
-        document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
-
-        let btn = document.getElementById('mineBtn');
-        if (energy < pick.energyCost) {
-            btn.innerText = '😴 Нет энергии';
-            btn.style.opacity = '0.6';
-        } else {
-            btn.innerText = '⛏️ Копать';
-            btn.style.opacity = '1';
-        }
-
-        let sec = 900 - Math.floor((Date.now() - lastTimestamp) / 1000) % 900;
-        let min = Math.floor(sec / 60), s = sec % 60;
-        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? 'Энергия полная' : `След. +1⚡ через ${min}м ${s}с`;
-
-        if (window.Telegram.WebApp.initDataUnsafe?.user) {
-            document.getElementById('userIdDisplay').innerText = 'ID: ' + window.Telegram.WebApp.initDataUnsafe.user.id;
-        }
-    }
-
-    function addLog(text) {
-        document.getElementById('log').innerText = text;
-    }
-
-    function mine() {
-        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
-        if (energy < pick.energyCost) { addLog('Нет энергии!'); return; }
-        energy -= pick.energyCost;
-        let chances = [70 - pickLevel*0.5, 20 + pickLevel*0.3, 10 + pickLevel*0.2, 0 + pickLevel*0.1, 0];
-        if (pickLevel >= 20) chances = [50, 25, 15, 7, 3];
-        if (pickLevel >= 40) chances = [40, 25, 20, 10, 5];
-        if (pickLevel >= 60) chances = [30, 25, 25, 15, 5];
-        if (pickLevel >= 80) chances = [20, 25, 30, 20, 5];
-        if (pickLevel >= 95) chances = [10, 25, 35, 25, 5];
-        let r = Math.random() * 100;
-        let count = 1;
-        if (Math.random() < pick.multiChance) count = Math.floor(Math.random() * pick.maxMulti) + 1;
-        let ore = '';
-        if (r < chances[0]) { inventory.stone += count; ore = '🗿 Камень'; }
-        else if (r < chances[0]+chances[1]) { inventory.iron += count; ore = '⚙️ Железо'; }
-        else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; ore = '🥇 Золото'; }
-        else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; ore = '💎 Алмаз'; }
-        else { inventory.mithril += count; ore = '💠 Мифрил'; }
-        totalOre += count;
-        try { if (window.navigator?.vibrate) navigator.vibrate(35 * count); } catch(e) {}
-        addLog(`Добыто ${ore} x${count}`);
-        saveGame(); updateUI();
-    }
-
-    function sellAll() {
-        let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
-        coins += total;
-        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-        addLog(`Продано за ${total} 🪙`);
-        saveGame(); updateUI();
-    }
-
-    function upgradePick() {
-        if (pickLevel >= 100) { addLog('Макс. уровень!'); return; }
-        let cost = pickLevel * 300;
-        if (coins < cost) { addLog('Не хватает монет!'); return; }
-        coins -= cost;
-        pickLevel++;
-        addLog(`Кирка улучшена до ${PICKAXES[pickLevel-1].name}!`);
-        saveGame(); updateUI();
-    }
-
-    function claimDaily() {
-        let now = Date.now();
-        if (now - lastDaily < 86400000) {
-            let left = Math.ceil((86400000 - (now - lastDaily)) / 3600000);
-            addLog(`Награда доступна через ${left} ч.`);
-            return;
-        }
-        coins += 50; energy = maxEnergy;
-        lastDaily = now; localStorage.setItem('lastDaily', lastDaily);
-        addLog('🎁 Ежедневная награда: +50🪙 и полная энергия!');
-        saveGame(); updateUI();
-    }
-
-    loadGame();
-    recoverEnergy();
     updateUI();
-    setInterval(() => { recoverEnergy(); updateUI(); }, 1000);
+}
+
+// --- ПРОДАЖА ---
+function sellAll(){
+    let total=
+    inventory.stone*2+
+    inventory.iron*8+
+    inventory.gold*25+
+    inventory.diamond*100+
+    inventory.mithril*50;
+
+    coins+=total;
+
+    inventory={stone:0,iron:0,gold:0,diamond:0,mithril:0};
+
+    log("Продано на "+total);
+
+    updateUI();
+}
+
+// --- АПГРЕЙД ---
+function upgradePick(){
+    let cost=pickLevel*300;
+
+    if(coins<cost){
+        log("Не хватает монет");
+        return;
+    }
+
+    coins-=cost;
+    pickLevel++;
+
+    log("Кирка улучшена до "+pickLevel);
+
+    updateUI();
+}
+
+// --- ЭНЕРГИЯ ---
+setInterval(()=>{
+    if(energy<maxEnergy) energy++;
+    updateUI();
+},3000);
+
+updateUI();
+
 </script>
 </body>
 </html>

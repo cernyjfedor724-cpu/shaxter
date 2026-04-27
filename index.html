@@ -69,9 +69,6 @@
         .share-btn {
             background: #2ecc71; width: 100%; margin-top: 10px;
         }
-        .special-badge {
-            display: inline-block; background: #c4450c; border-radius: 4px; padding: 2px 6px; font-size: 10px; margin-left: 6px;
-        }
         .pet-card {
             background: #333; border-radius: 12px; padding: 12px; margin: 8px 0; text-align: left;
         }
@@ -87,6 +84,9 @@
         body.light .invest-input {
             background: #fff; color: #222; border-color: #ccc;
         }
+        .chances {
+            font-size: 12px; color: #aaa; margin: 3px 0;
+        }
     </style>
 </head>
 <body>
@@ -94,7 +94,7 @@
     <span class="badge" id="userIdDisplay"></span><br>
     💰 <span id="coins">150</span> 🪙<br>
     🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>)<br>
-    <div style="font-size:12px; color:#aaa;" id="pickChances"></div>
+    <div class="chances" id="pickChances"></div>
     ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
@@ -121,35 +121,35 @@
 </div>
 
 <div id="panelMine" class="panel">
-    <button id="mineBtn">⛏️ Копать</button>
+    <button id="mineBtn" onclick="mine()">⛏️ Копать</button>
     <div id="pickUpgradeCost" style="font-size:12px; color:#aaa;"></div>
-    <button onclick="upgradePick()" id="upgradeBtn">🔨 Улучшить кирку</button>
-    <button onclick="buyEnergy()" id="buyEnergyBtn">🧪 Купить энергию (50 🪙)</button>
-    <button onclick="sellAll()" id="sellBtn">💰 Продать всё</button>
-    <button onclick="claimDaily()" id="dailyBtn">🎁 Ежедневная награда</button>
-    <button class="share-btn" onclick="share()" id="shareBtn">📤 Поделиться</button>
+    <button onclick="upgradePick()">🔨 Улучшить кирку</button>
+    <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
+    <button onclick="sellAll()">💰 Продать всё</button>
+    <button onclick="claimDaily()">🎁 Ежедневная награда</button>
+    <button class="share-btn" onclick="share()">📤 Поделиться</button>
 </div>
 
 <div id="panelMarket" class="panel hidden">
     <h3 id="marketTitle">📈 Рыночные цены</h3>
     <div id="marketPrices"></div>
-    <button onclick="sellAll()" id="sellMarketBtn">💰 Продать всё по рынку</button>
+    <button onclick="sellAll()">💰 Продать всё по рынку</button>
 </div>
 
 <div id="panelShop" class="panel hidden">
     <h3 id="shopTitle">🛒 Баффы (монеты)</h3>
-    <button onclick="buyBuff('ore')" id="buffOreBtn">💎 2x Руда (30с) — 150🪙</button>
-    <button onclick="buyBuff('sell')" id="buffSellBtn">💵 2x Продажа (30с) — 200🪙</button>
+    <button onclick="buyBuff('ore')">💎 2x Руда (30с) — 150🪙</button>
+    <button onclick="buyBuff('sell')">💵 2x Продажа (30с) — 200🪙</button>
     <div id="activeBuffs" style="margin-top:10px;"></div>
 </div>
 
 <div id="panelFortune" class="panel hidden">
     <h3 id="fortuneTitle">🎡 Колесо фортуны</h3>
-    <button onclick="spinWheel()" id="wheelBtn">🎡 Крутить (100🪙)</button>
+    <button onclick="spinWheel()">🎡 Крутить (100🪙)</button>
     <h3 style="margin-top:20px;">💼 <span id="investTitle">Инвестиции</span></h3>
     <p style="font-size:14px; color:#aaa;" id="investDesc">Введите сумму и проверьте удачу (50% x2)</p>
     <input type="number" id="investAmount" class="invest-input" placeholder="Сумма монет" min="1" step="1">
-    <button onclick="invest()" id="investBtn">💰 Инвестировать</button>
+    <button onclick="invest()">💰 Инвестировать</button>
 </div>
 
 <div id="panelAchieve" class="panel hidden">
@@ -387,23 +387,6 @@
         document.getElementById('tabAchieveName').innerText = LANG[lang].tabAchieveName;
         document.getElementById('tabPetsName').innerText = LANG[lang].tabPetsName;
         document.getElementById('tabSettingsName').innerText = LANG[lang].tabSettingsName;
-        document.getElementById('upgradeBtn').innerText = LANG[lang].upgradeBtn;
-        document.getElementById('buyEnergyBtn').innerText = '🧪 Купить энергию (50 🪙)';
-        document.getElementById('sellBtn').innerText = LANG[lang].sell;
-        document.getElementById('dailyBtn').innerText = LANG[lang].daily;
-        document.getElementById('shareBtn').innerText = LANG[lang].share;
-        document.getElementById('sellMarketBtn').innerText = LANG[lang].sell;
-        document.getElementById('buffOreBtn').innerText = '💎 2x Руда (30с) — 150🪙';
-        document.getElementById('buffSellBtn').innerText = '💵 2x Продажа (30с) — 200🪙';
-        document.getElementById('wheelBtn').innerText = LANG[lang].fortuneTitle;
-        document.getElementById('investBtn').innerText = '💰 ' + LANG[lang].investTitle;
-        document.getElementById('langBtn').innerText = lang === 'ru' ? 'EN/RU' : 'RU/EN';
-        // достижения
-        document.getElementById('ach1Text').innerText = LANG[lang].ach1Text;
-        document.getElementById('ach2Text').innerText = LANG[lang].ach2Text;
-        document.getElementById('ach3Text').innerText = LANG[lang].ach3Text;
-        document.getElementById('ach4Text').innerText = LANG[lang].ach4Text;
-        document.getElementById('ach5Text').innerText = LANG[lang].ach5Text;
 
         // питомцы
         updatePetUI('pet1');
@@ -495,7 +478,7 @@
         return base; // stone, iron, gold, diamond, mithril
     }
 
-    // РАБОЧАЯ ФУНКЦИЯ КОПКИ
+    // ГАРАНТИРОВАННО РАБОТАЮЩАЯ КНОПКА КОПАТЬ
     function mine() {
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
         if (energy < pick.energyCost) { addLog(LANG[lang].logNoEnergy); return; }
@@ -690,9 +673,9 @@
     function testVibration() {
         if (window.navigator && window.navigator.vibrate) {
             window.navigator.vibrate(300);
-            addLog(LANG[lang].vibrateMsg || 'Вибро!');
+            addLog('Вибро!');
         } else {
-            addLog(LANG[lang].vibrateUnavailable || 'Вибрация не поддерживается');
+            addLog('Вибрация не поддерживается');
         }
     }
     function resetProgress() {
@@ -704,7 +687,7 @@
     // ---------- ШАРИНГ ----------
     function share() {
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
-        let text = `${LANG[lang].shareText} ${totalOre} ${LANG[lang].shareSuffix} "${pick.name}". ${LANG[lang].tryYou}`;
+        let text = `Я играю в "Шахтёра"! Добыл ${totalOre} руды киркой "${pick.name}". Попробуй и ты!`;
         navigator.clipboard.writeText(text).then(() => addLog('Текст скопирован!'));
     }
 

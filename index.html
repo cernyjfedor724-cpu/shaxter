@@ -109,6 +109,12 @@
         .prestige-btn {
             background: #8e44ad; width: 100%; margin-top: 10px;
         }
+        .guide-content {
+            text-align: left; max-height: 400px; overflow-y: auto; padding: 10px; background: #1e1e1e; border-radius: 8px; color: #ccc;
+        }
+        body.light .guide-content {
+            background: #f5f5f5; color: #333;
+        }
     </style>
 </head>
 <body>
@@ -147,6 +153,7 @@
     <button id="tabAchieve" onclick="switchTab('achieve')">🏆 <span id="tabAchieveName">Достижения</span></button>
     <button id="tabPets" onclick="switchTab('pets')">🐾 <span id="tabPetsName">Питомцы</span></button>
     <button id="tabSettings" onclick="switchTab('settings')">⚙️ <span id="tabSettingsName">Настройки</span></button>
+    <button id="tabGuide" onclick="switchTab('guide')">📖 <span id="tabGuideName">Справочник</span></button>
 </div>
 
 <div id="panelMine" class="panel">
@@ -216,6 +223,38 @@
     <button onclick="resetProgress()">🗑️ <span id="resetBtn">Сбросить прогресс</span></button>
 </div>
 
+<div id="panelGuide" class="panel hidden">
+    <h3>📖 Справочник</h3>
+    <div class="guide-content">
+        <h4>⛏️ Кирки (1–100)</h4>
+        <p>В игре 100 уникальных кирок. Каждая повышает шанс добычи редких руд: камня, железа, золота, алмазов и мифрила. С ростом уровня растёт расход энергии, но увеличивается шанс множителя добычи (до x10 на высоких уровнях). У некоторых кирок есть особые стили: <b>diamond</b> (повышен шанс алмаза), <b>lucky</b> (увеличен множитель), <b>efficient</b> (снижен расход энергии). Цвет названия показывает редкость: белый (обычная), зелёный (редкая), синий (эпическая), фиолетовый (легендарная), золотой (мифическая).</p>
+        <h4>🃏 Карты духов (10 шт.)</h4>
+        <p>Редкие коллекционные карты, выпадающие при копке. Шанс выпадения растёт с каждым кликом без карты. Каждая карта даёт постоянный бонус: +% к шансу определённой руды, увеличение макс. энергии, множитель продажи, шанс двойной добычи, бонус к престижу или шанс выпадения следующих карт. Собранная коллекция отображается во вкладке «Достижения».</p>
+        <h4>🐾 Питомцы</h4>
+        <p><b>Белый чай</b> — пассивно приносит монеты каждую секунду (уровень повышает доход). <b>Пупуня</b> — увеличивает шанс редкой руды (алмазов и мифрила) на 5% за уровень. Питомцев можно улучшать за монеты.</p>
+        <h4>⚡ События</h4>
+        <p>Случайные события в шахте (раз в ~5 минут): <b>Обвал породы</b> (руда продаётся в 2 раза дороже), <b>Энергетический всплеск</b> (энергия не тратится 30 секунд), <b>Золотая жила</b> (шанс алмаза временно 70%), <b>Нашествие кротов</b> (двойная добыча).</p>
+        <h4>🏆 Достижения</h4>
+        <p>Новичок (10 камней), Счастливчик (найти алмаз), Богач (1000 монет), Мифриловый магнат (5 мифрила), Энергетический кризис (потратить 1000 энергии). Открытые достижения подсвечиваются.</p>
+        <h4>💀 Престиж</h4>
+        <p>Сброс всего прогресса за вечный множитель добычи (начинается с x2, растёт с каждым престижем). Требуется 100 000 монет. Карта «Взгляд Бездны» усиливает бонус престижа.</p>
+        <h4>📈 Рынок</h4>
+        <p>Цены на руду меняются каждые 10 минут (±20%). Можно продать всё по текущему курсу.</p>
+        <h4>🛒 Баффы</h4>
+        <p>Временные усиления за монеты: 2x Руда (30 секунд) и 2x Продажа (30 секунд).</p>
+        <h4>🎡 Колесо фортуны</h4>
+        <p>За 100 монет можно испытать удачу и получить случайный приз: монеты, энергию, бустер, алмаз или мифрил.</p>
+        <h4>💼 Инвестиции</h4>
+        <p>Вложите любую сумму — с шансом 50% вы получите x2, иначе потеряете вложенное.</p>
+        <h4>⏱️ Офлайн-доход</h4>
+        <p>Энергия восстанавливается на 1 единицу каждые 15 минут, даже когда игра закрыта. Питомец «Белый чай» приносит монеты пассивно каждую секунду.</p>
+        <h4>🌐 Языки и темы</h4>
+        <p>Поддерживаются русский и английский языки, а также светлая и тёмная темы оформления.</p>
+        <h4>📤 Шаринг</h4>
+        <p>Кнопка «Поделиться» копирует в буфер обмена ваши достижения, чтобы вы могли похвастаться перед друзьями.</p>
+    </div>
+</div>
+
 <div id="log"></div>
 
 <div style="font-size:12px; color:#666; margin-top:10px;">Made by Fedor Chernyshev</div>
@@ -247,7 +286,8 @@
             inventoryTitle: '🎒 Инвентарь',
             stoneName: 'Камень', ironName: 'Железо', goldName: 'Золото', diamondName: 'Алмазы', mithrilName: 'Мифрил',
             tabMineName: 'Шахта', tabMarketName: 'Рынок', tabShopName: 'Магазин', tabFortuneName: 'Азарт',
-            tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabSettingsName: 'Настройки',
+            tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabSettingsName: 'Настройки', tabGuideName: 'Справочник',
+            guideTitle: '📖 Справочник',
             ach1Text: 'Новичок — добыть 10 камней', ach2Text: 'Счастливчик — найти алмаз',
             ach3Text: 'Богач — накопить 1000 монет', ach4Text: 'Мифриловый магнат — добыть 5 мифрила',
             ach5Text: 'Энергетический кризис — потратить 1000 энергии'
@@ -274,7 +314,8 @@
             inventoryTitle: '🎒 Inventory',
             stoneName: 'Stone', ironName: 'Iron', goldName: 'Gold', diamondName: 'Diamonds', mithrilName: 'Mithril',
             tabMineName: 'Mine', tabMarketName: 'Market', tabShopName: 'Shop', tabFortuneName: 'Gamble',
-            tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabSettingsName: 'Settings',
+            tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabSettingsName: 'Settings', tabGuideName: 'Guide',
+            guideTitle: '📖 Guide',
             ach1Text: 'Beginner — mine 10 stones', ach2Text: 'Lucky — find a diamond',
             ach3Text: 'Rich — accumulate 1000 coins', ach4Text: 'Mithril Tycoon — mine 5 mithril',
             ach5Text: 'Energy Crisis — spend 1000 energy'
@@ -502,6 +543,7 @@
         document.getElementById('tabAchieveName').innerText = LANG[lang].tabAchieveName;
         document.getElementById('tabPetsName').innerText = LANG[lang].tabPetsName;
         document.getElementById('tabSettingsName').innerText = LANG[lang].tabSettingsName;
+        document.getElementById('tabGuideName').innerText = LANG[lang].tabGuideName;
 
         updatePetUI('pet1');
         updatePetUI('pet2');
@@ -574,7 +616,7 @@
     }
 
     function switchTab(tab) {
-        let tabs = ['mine','market','shop','fortune','achieve','pets','settings'];
+        let tabs = ['mine','market','shop','fortune','achieve','pets','settings','guide'];
         tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
         tabs.forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('tab-active'));
         document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
@@ -594,7 +636,6 @@
             base[3] += bonus;
             base[4] += bonus;
         }
-        // Бонусы карт
         collectedCards.forEach(i => {
             let card = SPIRIT_CARDS[i];
             switch(card.bonus) {
@@ -642,7 +683,7 @@
 
         try { if (window.navigator?.vibrate) navigator.vibrate(35 * count); } catch(e) {}
         addLog(`${LANG[lang].logMined} ${ore} x${count}`);
-        tryGetSpiritCard(); // ← попытка выпадения карты
+        tryGetSpiritCard();
         saveGame(); updateUI();
     }
 
@@ -802,7 +843,7 @@
         coins = 150;
         prestigeLevel = (prestigeLevel || 0) + 1;
         prestigeMultiplier = (prestigeMultiplier || 1) + 1;
-        if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value; // бонус карты
+        if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value;
         pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         totalClicks = 0; totalPlayTime = 0;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
@@ -866,4 +907,4 @@
     }, 1000);
 </script>
 </body>
-</html>
+    </html>

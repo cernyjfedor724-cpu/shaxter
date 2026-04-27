@@ -90,25 +90,25 @@
         .stat-line {
             font-size: 14px; color: #ccc; margin: 3px 0;
         }
-        /* Всплывающие цифры */
         .float-text {
-            position: fixed;
-            font-size: 28px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 1000;
+            position: fixed; font-size: 28px; font-weight: bold; pointer-events: none; z-index: 1000;
             animation: floatUp 0.8s ease-out forwards;
         }
         @keyframes floatUp {
             0% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-60px); }
         }
-        /* Цвета редкости кирок */
         .pick-common { color: #ffffff; }
         .pick-rare { color: #2ecc71; }
         .pick-epic { color: #3498db; }
         .pick-legendary { color: #9b59b6; }
         .pick-mythic { color: #f1c40f; text-shadow: 0 0 5px #f1c40f; }
+        .event-panel {
+            background: #c4450c; border-radius: 10px; padding: 10px; margin: 5px 0; font-weight: bold;
+        }
+        .prestige-btn {
+            background: #8e44ad; width: 100%; margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -119,10 +119,15 @@
     <div class="chances" id="pickChances"></div>
     <div class="stat-line">⏱️ В шахте: <span id="playTime">0</span></div>
     <div class="stat-line">👆 Кликов: <span id="totalClicks">0</span></div>
+    <div class="stat-line">💀 Престиж: <span id="prestigeLevel">0</span> (множитель x<span id="prestigeMultiplier">1</span>)</div>
     ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
     <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
+</div>
+
+<div id="eventPanel" class="event-panel hidden">
+    <span id="eventText"></span> <span id="eventTimer"></span>
 </div>
 
 <div class="stats">
@@ -151,6 +156,7 @@
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
     <button onclick="sellAll()">💰 Продать всё</button>
     <button onclick="claimDaily()">🎁 Ежедневная награда</button>
+    <button class="prestige-btn" onclick="prestige()">💀 Престиж (сброс за вечный бонус)</button>
     <button class="share-btn" onclick="share()">📤 Поделиться</button>
 </div>
 
@@ -278,7 +284,7 @@
 
     // ---------- БАЗОВЫЕ ПЕРЕМЕННЫЕ ----------
     let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false, totalMithril = 0, totalEnergySpent = 0;
-    let totalClicks = 0, totalPlayTime = 0; // секунд
+    let totalClicks = 0, totalPlayTime = 0;
     let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
     let lastTimestamp = Date.now();
     let buffDoubleOre = false, buffDoubleOreEnd = 0;
@@ -319,6 +325,68 @@
         });
     }
 
+    // ---------- КАРТЫ ДУХОВ ----------
+    const SPIRIT_CARDS = [
+        { name: 'Дух Седого Крота', bonus: 'stoneChance', value: 5, desc: '+5% к шансу камня' },
+        { name: 'Пламя Железной Жилы', bonus: 'ironChance', value: 8, desc: '+8% к шансу железа' },
+        { name: 'Искра Золотого Глаза', bonus: 'goldChance', value: 10, desc: '+10% к шансу золота' },
+        { name: 'Осколок Алмазной Звезды', bonus: 'diamondChance', value: 7, desc: '+7% к шансу алмаза' },
+        { name: 'Дыхание Мифрилового Дракона', bonus: 'mithrilChance', value: 5, desc: '+5% к шансу мифрила' },
+        { name: 'Тень Подземного Хранителя', bonus: 'maxEnergy', value: 20, desc: '+20 к макс. энергии' },
+        { name: 'Мудрость Старого Шахтёра', bonus: 'coinMultiplier', value: 1.5, desc: '+50% монет при продаже' },
+        { name: 'Сила Каменного Голема', bonus: 'oreMultiplier', value: 0.3, desc: '+30% шанс двойной добычи' },
+        { name: 'Взгляд Бездны', bonus: 'prestigeBonus', value: 0.5, desc: '+50% к бонусу престижа' },
+        { name: 'Душа Шахты', bonus: 'luckBoost', value: 2, desc: '+2% к шансу выпадения карт' }
+    ];
+
+    let collectedCards = JSON.parse(localStorage.getItem('collectedCards') || '[]');
+    let clicksWithoutCard = parseInt(localStorage.getItem('clicksWithoutCard') || '0');
+
+    function getCardDropChance() {
+        let base = collectedCards.length === 0 ? 0.05 : 0.01;
+        let boost = Math.floor(clicksWithoutCard / 500) * 0.01;
+        let luck = collectedCards.includes(9) ? SPIRIT_CARDS[9].value / 100 : 0;
+        return Math.min(0.95, (base + boost) * (1 + luck));
+    }
+
+    function tryGetSpiritCard() {
+        if (collectedCards.length >= SPIRIT_CARDS.length) return false;
+        let chance = getCardDropChance();
+        if (Math.random() < chance) {
+            let available = SPIRIT_CARDS.map((c, i) => i).filter(i => !collectedCards.includes(i));
+            if (available.length === 0) return false;
+            let cardIndex = available[Math.floor(Math.random() * available.length)];
+            collectedCards.push(cardIndex);
+            localStorage.setItem('collectedCards', JSON.stringify(collectedCards));
+            clicksWithoutCard = 0;
+            localStorage.setItem('clicksWithoutCard', 0);
+            addLog('🃏 Найдена карта: ' + SPIRIT_CARDS[cardIndex].name + ' — ' + SPIRIT_CARDS[cardIndex].desc);
+            updateCardDisplay();
+            return true;
+        }
+        clicksWithoutCard++;
+        localStorage.setItem('clicksWithoutCard', clicksWithoutCard);
+        return false;
+    }
+
+    function updateCardDisplay() {
+        let panel = document.getElementById('cardPanel');
+        if (!panel) return;
+        let chanceHtml = '';
+        if (collectedCards.length < SPIRIT_CARDS.length) {
+            let chance = getCardDropChance();
+            chanceHtml = `<div style="font-size:12px; color:#aaa;">Шанс найти карту: ${(chance*100).toFixed(1)}%</div>`;
+        }
+        let cardsHtml = SPIRIT_CARDS.map((card, i) => {
+            let owned = collectedCards.includes(i);
+            return `<div style="color:${owned ? '#f1c40f' : '#666'}; margin:2px 0;">${owned ? '🃏' : '⬛'} ${card.name} — ${card.desc}</div>`;
+        }).join('');
+        panel.innerHTML = `<h3>🃏 Карты духов (${collectedCards.length}/${SPIRIT_CARDS.length})</h3>${cardsHtml}${chanceHtml}`;
+    }
+
+    document.getElementById('panelAchieve').insertAdjacentHTML('beforeend', '<div id="cardPanel" style="margin-top:10px;"></div>');
+    updateCardDisplay();
+
     // ---------- ВСПЛЫВАЮЩИЕ ЦИФРЫ ----------
     function showFloatingText(text, x, y) {
         const el = document.createElement('div');
@@ -346,8 +414,7 @@
                 pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
                 totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
                 totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
-                totalClicks = d.totalClicks || 0;
-                totalPlayTime = d.totalPlayTime || 0;
+                totalClicks = d.totalClicks || 0; totalPlayTime = d.totalPlayTime || 0;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 lastTimestamp = d.lastTimestamp || Date.now();
                 if (d.pets) {
@@ -397,11 +464,9 @@
         document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
         document.getElementById('pickUpgradeCost').innerText = pickLevel >= 100 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
 
-        // Время и клики
         document.getElementById('playTime').innerText = formatTime(totalPlayTime);
         document.getElementById('totalClicks').innerText = totalClicks;
 
-        // Цвет редкости кирки
         let pickColor = 'pick-common';
         if (pickLevel <= 5) pickColor = 'pick-common';
         else if (pickLevel <= 20) pickColor = 'pick-rare';
@@ -410,12 +475,10 @@
         else pickColor = 'pick-mythic';
         document.getElementById('pickName').className = pickColor;
 
-        // Показываем шансы
         let chances = getOreChances(pickLevel);
-        document.getElementById('pickChances').innerHTML = 
+        document.getElementById('pickChances').innerHTML =
             `🗿${chances[0].toFixed(1)}% ⚙️${chances[1].toFixed(1)}% 🥇${chances[2].toFixed(1)}% 💎${chances[3].toFixed(1)}% 💠${chances[4].toFixed(1)}%`;
 
-        // Обновление языков
         document.getElementById('inventoryTitle').innerText = LANG[lang].inventoryTitle;
         document.getElementById('stoneName').innerText = LANG[lang].stoneName;
         document.getElementById('ironName').innerText = LANG[lang].ironName;
@@ -440,7 +503,6 @@
         document.getElementById('tabPetsName').innerText = LANG[lang].tabPetsName;
         document.getElementById('tabSettingsName').innerText = LANG[lang].tabSettingsName;
 
-        // питомцы
         updatePetUI('pet1');
         updatePetUI('pet2');
 
@@ -511,7 +573,6 @@
         document.getElementById('log').innerText = text;
     }
 
-    // ---------- ТАБЫ ----------
     function switchTab(tab) {
         let tabs = ['mine','market','shop','fortune','achieve','pets','settings'];
         tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
@@ -520,7 +581,7 @@
         if (tab === 'market') updateMarketDisplay();
     }
 
-    // ---------- ИГРОВЫЕ ДЕЙСТВИЯ ----------
+    // ---------- ШАНСЫ С УЧЁТОМ КАРТ ----------
     function getOreChances(lvl) {
         let base = [70 - lvl*0.5, 20 + lvl*0.3, 10 + lvl*0.2, 0 + lvl*0.1, 0];
         if (lvl >= 20) base = [50, 25, 15, 7, 3];
@@ -528,13 +589,25 @@
         if (lvl >= 60) base = [30, 25, 25, 15, 5];
         if (lvl >= 80) base = [20, 25, 30, 20, 5];
         if (lvl >= 95) base = [10, 25, 35, 25, 5];
-        // бонус Пупуни (+5% к редкой руде за каждый уровень)
         if (pets.pet2.owned && pets.pet2.level > 0) {
             let bonus = pets.pet2.level * 5;
             base[3] += bonus;
             base[4] += bonus;
         }
-        return base; // stone, iron, gold, diamond, mithril
+        // Бонусы карт
+        collectedCards.forEach(i => {
+            let card = SPIRIT_CARDS[i];
+            switch(card.bonus) {
+                case 'stoneChance': base[0] += card.value; break;
+                case 'ironChance': base[1] += card.value; break;
+                case 'goldChance': base[2] += card.value; break;
+                case 'diamondChance': base[3] += card.value; break;
+                case 'mithrilChance': base[4] += card.value; break;
+            }
+        });
+        let total = base.reduce((a,b) => a+b, 0);
+        if (total > 100) base = base.map(v => v * 100 / total);
+        return base;
     }
 
     function mine(event) {
@@ -546,6 +619,7 @@
         let chances = getOreChances(pickLevel);
         let r = Math.random() * 100;
         let count = buffDoubleOre ? 2 : 1;
+        if (collectedCards.includes(7) && Math.random() < SPIRIT_CARDS[7].value) count *= 2;
         let pickMultiplier = 1;
         if (Math.random() < pick.multiChance) {
             pickMultiplier = Math.floor(Math.random() * pick.maxMulti) + 1;
@@ -559,7 +633,6 @@
         else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
 
-        // Всплывающая цифра
         if (event) {
             let rect = event.target.getBoundingClientRect();
             let x = rect.left + rect.width / 2 - 30;
@@ -569,12 +642,14 @@
 
         try { if (window.navigator?.vibrate) navigator.vibrate(35 * count); } catch(e) {}
         addLog(`${LANG[lang].logMined} ${ore} x${count}`);
+        tryGetSpiritCard(); // ← попытка выпадения карты
         saveGame(); updateUI();
     }
 
     function sellAll() {
         let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
         if (buffDoubleSell) total *= 3;
+        if (collectedCards.includes(6)) total = Math.floor(total * SPIRIT_CARDS[6].value);
         coins += total;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         addLog(`${LANG[lang].logSold} ${total} 🪙`);
@@ -618,9 +693,8 @@
         if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
         if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
         showActiveBuffs();
-        // Питомец "Белый чай" — даёт по 1 монете каждую секунду (умножается на уровень)
         if (pets.pet1.owned && pets.pet1.level > 0) {
-            let interval = 1000; // 1 секунда
+            let interval = 1000;
             if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
             if (now - pets.pet1.lastPaid >= interval) {
                 coins += 1 * pets.pet1.level;
@@ -655,7 +729,6 @@
         updateMarketDisplay();
     }, 600000);
 
-    // Счётчик времени игры (каждую секунду +1)
     setInterval(() => {
         totalPlayTime++;
         saveGame();
@@ -720,6 +793,23 @@
         coins -= pet.upgradeCost;
         pet.level++;
         saveGame(); updateUI();
+    }
+
+    // ---------- ПРЕСТИЖ ----------
+    function prestige() {
+        if (coins < 100000) { addLog('Нужно 100 000 монет для престижа!'); return; }
+        if (!confirm('Сбросить ВЕСЬ прогресс ради вечного множителя?')) return;
+        coins = 150;
+        prestigeLevel = (prestigeLevel || 0) + 1;
+        prestigeMultiplier = (prestigeMultiplier || 1) + 1;
+        if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value; // бонус карты
+        pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
+        totalClicks = 0; totalPlayTime = 0;
+        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
+        energy = 100; maxEnergy = 100;
+        lastTimestamp = Date.now();
+        saveGame(); updateUI();
+        addLog(`💀 Престиж ${prestigeLevel}! Множитель теперь x${prestigeMultiplier}`);
     }
 
     // ---------- ЕЖЕДНЕВНАЯ НАГРАДА ----------

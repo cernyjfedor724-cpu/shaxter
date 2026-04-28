@@ -332,6 +332,7 @@
     let buffDoubleSell = false, buffDoubleSellEnd = 0;
     let lastDaily = localStorage.getItem('lastDaily') ? Number(localStorage.getItem('lastDaily')) : 0;
     let market = { stone: 2, iron: 8, gold: 25, diamond: 100, mithril: 50 };
+    let prestigeLevel = 0, prestigeMultiplier = 1;
 
     // Питомцы
     let pets = {
@@ -441,7 +442,7 @@
 
     // ---------- ФУНКЦИИ СОХРАНЕНИЯ ----------
     function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, lastTimestamp: Date.now(), pets };
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, prestigeLevel, prestigeMultiplier, lastTimestamp: Date.now(), pets };
         localStorage.setItem('shakhter_save', JSON.stringify(data));
     }
 
@@ -456,6 +457,7 @@
                 totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
                 totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
                 totalClicks = d.totalClicks || 0; totalPlayTime = d.totalPlayTime || 0;
+                prestigeLevel = d.prestigeLevel || 0; prestigeMultiplier = d.prestigeMultiplier || 1;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 lastTimestamp = d.lastTimestamp || Date.now();
                 if (d.pets) {
@@ -471,6 +473,7 @@
     function resetGame() {
         coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         totalClicks = 0; totalPlayTime = 0;
+        prestigeLevel = 0; prestigeMultiplier = 1;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         lastTimestamp = Date.now();
         pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0 };
@@ -497,6 +500,8 @@
         document.getElementById('pickLevel').innerText = pickLevel;
         document.getElementById('energyCost').innerText = pick.energyCost;
         document.getElementById('totalOre').innerText = totalOre;
+        document.getElementById('prestigeLevel').innerText = prestigeLevel;
+        document.getElementById('prestigeMultiplier').innerText = prestigeMultiplier;
         document.getElementById('stone').innerText = inventory.stone;
         document.getElementById('iron').innerText = inventory.iron;
         document.getElementById('gold').innerText = inventory.gold;
@@ -830,7 +835,7 @@
         let pet = pets[petKey];
         if (!pet.owned) { addLog('Сначала купите питомца'); return; }
         if (pet.level >= pet.maxLevel) { addLog('Максимальный уровень'); return; }
-        if (coins < pet.upgradeCost) { addLog('Не хватает монет'); return; }
+        if (coins < pet.upgradeCost) { addLog('Не хватаet монет'); return; }
         coins -= pet.upgradeCost;
         pet.level++;
         saveGame(); updateUI();
@@ -841,8 +846,8 @@
         if (coins < 100000) { addLog('Нужно 100 000 монет для престижа!'); return; }
         if (!confirm('Сбросить ВЕСЬ прогресс ради вечного множителя?')) return;
         coins = 150;
-        prestigeLevel = (prestigeLevel || 0) + 1;
-        prestigeMultiplier = (prestigeMultiplier || 1) + 1;
+        prestigeLevel++;
+        prestigeMultiplier++;
         if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value;
         pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         totalClicks = 0; totalPlayTime = 0;

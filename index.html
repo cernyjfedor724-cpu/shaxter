@@ -126,7 +126,7 @@
     <div class="stat-line">⏱️ В шахте: <span id="playTime">0</span></div>
     <div class="stat-line">👆 Кликов: <span id="totalClicks">0</span></div>
     <div class="stat-line">💀 Престиж: <span id="prestigeLevel">0</span> (множитель x<span id="prestigeMultiplier">1</span>)</div>
-    ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар)
+    ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар, +<span id="regenRate">3</span>/сек)
     <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
     <div id="regenTimer" style="font-size:12px; color:#aaa;"></div>
     <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
@@ -161,7 +161,11 @@
     <div id="pickUpgradeCost" style="font-size:12px; color:#aaa;"></div>
     <button onclick="upgradePick()">🔨 Улучшить кирку</button>
     <button onclick="buyEnergy()">🧪 Купить энергию (50 🪙)</button>
+    <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="maxEnergyCost">200</span> 🪙)</button>
+    <button onclick="upgradeRegen()">🔄 Ускорить восст. энергии (<span id="regenCost">200</span> 🪙)</button>
     <button onclick="sellAll()">💰 Продать всё</button>
+    <button onclick="buyNPC()">🤖 Купить робота-шахтёра (5000 🪙)</button>
+    <div id="npcStatus" style="font-size:12px; color:#aaa;">Робот не куплен</div>
     <button onclick="claimDaily()">🎁 Ежедневная награда</button>
     <button class="prestige-btn" onclick="prestige()">💀 Престиж (сброс за вечный бонус)</button>
     <button class="share-btn" onclick="share()">📤 Поделиться</button>
@@ -283,7 +287,8 @@
             tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabSettingsName: 'Настройки', tabGuideName: 'Справочник',
             ach1Text: 'Новичок — добыть 10 камней', ach2Text: 'Счастливчик — найти алмаз',
             ach3Text: 'Богач — накопить 1000 монет', ach4Text: 'Мифриловый магнат — добыть 5 мифрила',
-            ach5Text: 'Энергетический кризис — потратить 1000 энергии'
+            ach5Text: 'Энергетический кризис — потратить 1000 энергии',
+            npcNotOwned: 'Робот не куплен', npcOwned: 'Робот работает!'
         },
         en: {
             mine: '⛏️ Mine', noEnergy: '😴 No energy', sell: '💰 Sell all', upgrade: '🔨 Upgrade',
@@ -310,12 +315,13 @@
             tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabSettingsName: 'Settings', tabGuideName: 'Guide',
             ach1Text: 'Beginner — mine 10 stones', ach2Text: 'Lucky — find a diamond',
             ach3Text: 'Rich — accumulate 1000 coins', ach4Text: 'Mithril Tycoon — mine 5 mithril',
-            ach5Text: 'Energy Crisis — spend 1000 energy'
+            ach5Text: 'Energy Crisis — spend 1000 energy',
+            npcNotOwned: 'Robot not owned', npcOwned: 'Robot is working!'
         }
     };
     let lang = localStorage.getItem('lang') || 'ru';
 
-    // Базовые переменные
+    // ---------- БАЗОВЫЕ ПЕРЕМЕННЫЕ ----------
     let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false, totalMithril = 0, totalEnergySpent = 0;
     let totalClicks = 0, totalPlayTime = 0;
     let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
@@ -325,6 +331,15 @@
     let lastDaily = localStorage.getItem('lastDaily') ? Number(localStorage.getItem('lastDaily')) : 0;
     let market = { stone: 2, iron: 8, gold: 25, diamond: 100, mithril: 50 };
     let prestigeLevel = 0, prestigeMultiplier = 1;
+
+    // Новые переменные
+    let maxEnergyUpgradeLevel = 0;   // сколько раз улучшена макс. энергия
+    let maxEnergyCost = 200;         // текущая цена улучшения
+    let regenUpgradeLevel = 0;       // сколько раз улучшена регенерация
+    let regenCost = 200;             // текущая цена ускорения
+    let regenRate = 3;              // текущая скорость восст. (единиц/сек)
+    let npcOwned = false;           // куплен ли робот
+    let npcMineInterval = null;     // интервал для робота
 
     // Питомцы
     let pets = {
@@ -420,7 +435,7 @@
 
     // Сохранение
     function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, prestigeLevel, prestigeMultiplier, lastTimestamp: Date.now(), pets };
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, prestigeLevel, prestigeMultiplier, maxEnergyUpgradeLevel, maxEnergyCost, regenUpgradeLevel, regenCost, regenRate, npcOwned, lastTimestamp: Date.now(), pets };
         localStorage.setItem('shakhter_save', JSON.stringify(data));
     }
 
@@ -436,19 +451,27 @@
                 totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
                 totalClicks = d.totalClicks || 0; totalPlayTime = d.totalPlayTime || 0;
                 prestigeLevel = d.prestigeLevel || 0; prestigeMultiplier = d.prestigeMultiplier || 1;
+                maxEnergyUpgradeLevel = d.maxEnergyUpgradeLevel || 0;
+                maxEnergyCost = d.maxEnergyCost || 200;
+                regenUpgradeLevel = d.regenUpgradeLevel || 0;
+                regenCost = d.regenCost || 200;
+                regenRate = d.regenRate || 3;
+                npcOwned = d.npcOwned || false;
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 lastTimestamp = d.lastTimestamp || Date.now();
                 if (d.pets) {
                     pets.pet1 = d.pets.pet1 || pets.pet1;
                     pets.pet2 = d.pets.pet2 || pets.pet2;
                 }
-                // Восстановление энергии: +3 за каждую секунду отсутствия
+                // Восстановление энергии за время отсутствия с учётом regenRate
                 let now = Date.now();
                 let diffSeconds = Math.floor((now - lastTimestamp) / 1000);
                 if (diffSeconds > 0 && energy < maxEnergy) {
-                    energy = Math.min(maxEnergy, energy + diffSeconds * 3);
+                    energy = Math.min(maxEnergy, energy + diffSeconds * regenRate);
                 }
                 lastTimestamp = now;
+                // Запуск интервала NPC, если нужно
+                if (npcOwned && !npcMineInterval) startNPC();
             } catch(e) { resetGame(); }
         } else { resetGame(); }
         updateUI();
@@ -458,10 +481,14 @@
         coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         totalClicks = 0; totalPlayTime = 0;
         prestigeLevel = 0; prestigeMultiplier = 1;
+        maxEnergyUpgradeLevel = 0; maxEnergyCost = 200;
+        regenUpgradeLevel = 0; regenCost = 200; regenRate = 3;
+        npcOwned = false;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         lastTimestamp = Date.now();
         pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0 };
         pets.pet2 = { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0 };
+        if (npcMineInterval) { clearInterval(npcMineInterval); npcMineInterval = null; }
     }
 
     function updateUI() {
@@ -470,6 +497,7 @@
         document.getElementById('coins').innerText = coins;
         document.getElementById('energy').innerText = energy;
         document.getElementById('maxEnergy').innerText = maxEnergy;
+        document.getElementById('regenRate').innerText = regenRate;
         document.getElementById('pickName').innerText = pick.name;
         document.getElementById('pickLevel').innerText = pickLevel;
         document.getElementById('energyCost').innerText = pick.energyCost;
@@ -485,6 +513,11 @@
         document.getElementById('pickUpgradeCost').innerText = pickLevel >= 100 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
         document.getElementById('playTime').innerText = formatTime(totalPlayTime);
         document.getElementById('totalClicks').innerText = totalClicks;
+
+        // Кнопки улучшений
+        document.getElementById('maxEnergyCost').innerText = maxEnergyCost;
+        document.getElementById('regenCost').innerText = regenCost;
+        document.getElementById('npcStatus').innerText = npcOwned ? LANG[lang].npcOwned : LANG[lang].npcNotOwned;
 
         let pickColor = 'pick-common';
         if (pickLevel <= 5) pickColor = 'pick-common';
@@ -535,7 +568,7 @@
             btn.style.opacity = '1';
         }
 
-        let sec = energy >= maxEnergy ? 0 : Math.ceil((maxEnergy - energy) / 3);
+        let sec = energy >= maxEnergy ? 0 : Math.ceil((maxEnergy - energy) / regenRate);
         document.getElementById('regenTimer').innerText = energy >= maxEnergy ? LANG[lang].energyFull : `Полная через ${sec}с`;
 
         if (window.Telegram.WebApp.initDataUnsafe?.user) {
@@ -656,6 +689,68 @@
         saveGame(); updateUI();
     }
 
+    // Функция для NPC (без UI-эффектов)
+    function npcMine() {
+        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
+        // NPC не тратит энергию игрока
+        let chances = getOreChances(pickLevel);
+        let r = Math.random() * 100;
+        let count = 1;
+        if (buffDoubleOre) count *= 2;
+        if (collectedCards.includes(7) && Math.random() < SPIRIT_CARDS[7].value) count *= 2;
+        let pickMultiplier = 1;
+        if (Math.random() < pick.multiChance) {
+            pickMultiplier = Math.floor(Math.random() * pick.maxMulti) + 1;
+        }
+        count *= pickMultiplier;
+        let ore = '';
+        if (r < chances[0]) { inventory.stone += count; totalStone += count; }
+        else if (r < chances[0]+chances[1]) { inventory.iron += count; }
+        else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; }
+        else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; }
+        else { inventory.mithril += count; totalMithril += count; }
+        totalOre += count;
+        saveGame(); // сохраняем прогресс, но UI не обновляем каждые 2 сек, чтобы не грузить
+    }
+
+    function startNPC() {
+        if (npcMineInterval) clearInterval(npcMineInterval);
+        npcMineInterval = setInterval(() => {
+            npcMine();
+            updateUI(); // обновляем интерфейс, чтобы игрок видел изменения
+        }, 2000); // каждые 2 секунды
+    }
+
+    function buyNPC() {
+        if (npcOwned) { addLog('Робот уже куплен!'); return; }
+        if (coins < 5000) { addLog('Не хватает 5000 монет!'); return; }
+        coins -= 5000;
+        npcOwned = true;
+        startNPC();
+        saveGame(); updateUI();
+        addLog('🤖 Робот-шахтёр начал работу!');
+    }
+
+    function upgradeMaxEnergy() {
+        if (coins < maxEnergyCost) { addLog(`Не хватает ${maxEnergyCost} монет!`); return; }
+        coins -= maxEnergyCost;
+        maxEnergyUpgradeLevel++;
+        maxEnergy += 10; // увеличиваем макс. энергию на 10
+        maxEnergyCost = 200 + maxEnergyUpgradeLevel * 100; // цена растёт
+        saveGame(); updateUI();
+        addLog(`⚡ Макс. энергия увеличена до ${maxEnergy}!`);
+    }
+
+    function upgradeRegen() {
+        if (coins < regenCost) { addLog(`Не хватает ${regenCost} монет!`); return; }
+        coins -= regenCost;
+        regenUpgradeLevel++;
+        regenRate += 1; // увеличиваем восстановление на 1 ед/сек
+        regenCost = 200 + regenUpgradeLevel * 100; // цена растёт
+        saveGame(); updateUI();
+        addLog(`🔄 Восстановление энергии ускорено до ${regenRate}/сек!`);
+    }
+
     function sellAll() {
         let total = inventory.stone * market.stone + inventory.iron * market.iron + inventory.gold * market.gold + inventory.diamond * market.diamond + inventory.mithril * market.mithril;
         if (buffDoubleSell) total *= 3;
@@ -711,9 +806,9 @@
                 updateUI();
             }
         }
-        // Восстановление энергии: +3 каждую секунду
+        // Восстановление энергии
         if (energy < maxEnergy) {
-            energy = Math.min(maxEnergy, energy + 3);
+            energy = Math.min(maxEnergy, energy + regenRate);
         }
         updateUI();
     }, 1000);
@@ -803,8 +898,9 @@
         pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
         totalClicks = 0; totalPlayTime = 0;
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-        energy = 100; maxEnergy = 100;
+        energy = maxEnergy; // энергия до максимума
         lastTimestamp = Date.now();
+        // сброс улучшений энергии? решаем, что престиж не сбрасывает maxEnergyUpgradeLevel и regenUpgradeLevel, но можно сбросить для хардкора. Оставим.
         saveGame(); updateUI();
         addLog(`💀 Престиж ${prestigeLevel}! Множитель теперь x${prestigeMultiplier}`);
     }
@@ -849,9 +945,7 @@
 
     if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
     loadGame();
-    setInterval(() => {
-        // Энергия уже восстанавливается в другом setInterval
-    }, 1000);
+    if (npcOwned && !npcMineInterval) startNPC();
 </script>
 </body>
     </html>

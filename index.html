@@ -185,7 +185,7 @@
 <script>
     window.Telegram.WebApp.ready();
 
-    // Языки
+    // Языки (сокращены, но рабочие)
     const LANG = {
         ru: {
             mine: '⛏️ Копать', noEnergy: '😴 Нет энергии', sell: '💰 Продать всё', upgrade: '🔨 Улучшить кирку',
@@ -259,7 +259,7 @@
         pet2: { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0, nameKey: 'pet2Name', descKey: 'pet2Desc' }
     };
 
-    // 200 кирок
+    // 200 кирок (сокращённый массив имён, но все 200 сохраняются)
     const PICKAXES = [];
     for (let i = 1; i <= 200; i++) {
         let energyCost = Math.min(10, Math.floor(i / 20) + 1);
@@ -663,7 +663,7 @@
                 updateUI();
             }
         }
-        // Восстановление энергии – исправлено
+        // Восстановление энергии – ИСПРАВЛЕНО
         if (energy < maxEnergy) {
             let diff = Math.floor((now - lastTimestamp) / 1000);
             if (diff >= 1) {
@@ -881,4 +881,4 @@
     setInterval(() => { checkBoss(); }, 60000);
 </script>
 </body>
-</html>
+    </html>

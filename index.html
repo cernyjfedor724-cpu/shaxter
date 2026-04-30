@@ -458,7 +458,6 @@
         } else {
             document.getElementById('bossHP').innerText = 'Босс не активен';
         }
-        document.getElementById('robotStatus') ? document.getElementById('robotStatus').innerText = robotOwned ? 'Активен' : 'Не куплен' : null;
         updatePetUI('pet1'); updatePetUI('pet2');
         if (!document.getElementById('cardPanel').innerHTML) updateCardDisplay();
     }
@@ -525,8 +524,7 @@
 
     function mine(event) {
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
-        let totalRuda = inventory.stone + inventory.iron + inventory.gold + inventory.diamond + inventory.mithril;
-        if (totalRuda >= mineCapacity) { addLog('📦 Склад полон! Продай руду или улучши шахту.'); return; }
+        // Только проверка энергии
         if (energy < pick.energyCost) { addLog(LANG[lang].logNoEnergy); return; }
         energy -= pick.energyCost;
         totalEnergySpent += pick.energyCost;
@@ -871,4 +869,4 @@
     setInterval(() => { checkBoss(); }, 60000);
 </script>
 </body>
-    </html>
+</html>

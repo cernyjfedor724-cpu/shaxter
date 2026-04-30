@@ -370,9 +370,12 @@
                 inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
                 lastTimestamp = d.lastTimestamp || Date.now();
                 if (d.pets) { pets.pet1 = d.pets.pet1 || pets.pet1; pets.pet2 = d.pets.pet2 || pets.pet2; }
+                // Восстановление энергии за время отсутствия
                 let now = Date.now();
                 let diffSeconds = Math.floor((now - lastTimestamp) / 1000);
-                if (diffSeconds > 0 && energy < maxEnergy) energy = Math.min(maxEnergy, energy + diffSeconds * regenRate);
+                if (diffSeconds > 0 && energy < maxEnergy) {
+                    energy = Math.min(maxEnergy, energy + diffSeconds * regenRate);
+                }
                 lastTimestamp = now;
                 if (npcOwned && !npcMineInterval) startNPC();
                 if (robotOwned && !robotInterval) startRobot();
@@ -655,9 +658,13 @@
                 updateUI();
             }
         }
+        // Восстановление энергии – ИСПРАВЛЕНО
         if (energy < maxEnergy) {
-            energy += regenRate;
-            if (energy > maxEnergy) energy = maxEnergy;
+            let diff = Math.floor((now - lastTimestamp) / 1000);
+            if (diff >= 1) {
+                energy = Math.min(maxEnergy, energy + diff * regenRate);
+                lastTimestamp = now;
+            }
         }
         updateUI();
     }, 1000);
@@ -869,4 +876,4 @@
     setInterval(() => { checkBoss(); }, 60000);
 </script>
 </body>
-</html>
+    </html>

@@ -616,7 +616,7 @@
     }
 
     function mine(event) {
-        if (checkAntiCheat()) return;
+        //if (checkAntiCheat()) return;
         let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
         let totalRuda = inventory.stone + inventory.iron + inventory.gold + inventory.diamond + inventory.mithril;
         if (totalRuda >= mineCapacity) { addLog('📦 Склад полон! Продай руду или улучши шахту.'); return; }

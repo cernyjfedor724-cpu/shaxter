@@ -425,6 +425,10 @@
         document.getElementById('depthLevel').innerText = depthLevel;
         document.getElementById('dangerLevel').innerText = Math.min(95, depthLevel * 3);
         document.getElementById('mutationBadge').innerText = mutationLevel ? mutationNames[mutationLevel] : '';
+        // обновление цен улучшений
+        document.getElementById('maxEnergyCost').innerText = maxEnergyCost;
+        document.getElementById('regenCost').innerText = regenCost;
+
         let pickColor = 'pick-common';
         if (pickLevel <= 10) pickColor = 'pick-common';
         else if (pickLevel <= 40) pickColor = 'pick-rare';
@@ -649,6 +653,7 @@
         if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
         if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
         showActiveBuffs();
+        // Питомец Белый чай
         if (pets.pet1.owned && pets.pet1.level > 0) {
             let interval = 1000;
             if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
@@ -658,7 +663,7 @@
                 updateUI();
             }
         }
-        // Восстановление энергии – ИСПРАВЛЕНО
+        // Восстановление энергии – исправлено
         if (energy < maxEnergy) {
             let diff = Math.floor((now - lastTimestamp) / 1000);
             if (diff >= 1) {
@@ -876,4 +881,4 @@
     setInterval(() => { checkBoss(); }, 60000);
 </script>
 </body>
-    </html>
+</html>

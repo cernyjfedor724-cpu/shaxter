@@ -6,24 +6,46 @@
     <title>⛏️ Шахтёр: Эра Глубин</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #1a1a1a; color: #e0e0e0; font-family: Arial; margin: 0; padding: 10px; text-align: center; }
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body { background: #1a1a1a; color: #e0e0e0; font-family: Arial, sans-serif; margin: 0; padding: 10px; text-align: center; transition: background 0.2s; }
         body.light { background: #f0f0f0; color: #222; }
-        .stats, .panel { background: #2a2a2a; border-radius: 15px; padding: 15px; margin: 5px 0; font-size: 14px; }
+        .stats, .panel { background: #2a2a2a; border-radius: 15px; padding: 15px; margin: 5px 0; font-size: 14px; transition: background 0.2s; }
         body.light .stats, body.light .panel { background: #fff; color: #222; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        button { background: #3a3a3a; color: #fff; border: none; padding: 10px 12px; margin: 4px; border-radius: 12px; font-size: 14px; cursor: pointer; font-weight: bold; width: 90%; }
+        button { background: #3a3a3a; color: #fff; border: none; padding: 10px 12px; margin: 4px; border-radius: 12px; font-size: 14px; cursor: pointer; font-weight: bold; width: 90%; transition: transform 0.05s, background 0.1s; }
         body.light button { background: #ddd; color: #222; }
+        button:active { transform: scale(0.97); }
         #mineBtn { background: #c4450c; font-size: 20px; padding: 12px; }
         .tab-bar { display: flex; justify-content: space-around; margin: 10px 0; flex-wrap: wrap; }
-        .tab-bar button { flex: 1; background: #2a2a2a; border-radius: 12px 12px 0 0; font-size: 11px; padding: 8px 0; min-width: 40px; }
+        .tab-bar button { flex: 1; background: #2a2a2a; border-radius: 12px 12px 0 0; font-size: 11px; padding: 8px 0; min-width: 40px; width: auto; }
         body.light .tab-bar button { background: #ddd; }
         .tab-active { background: #c4450c !important; color: #fff; }
         .energy-bar { background: #333; border-radius: 8px; height: 14px; margin: 5px 0; overflow: hidden; }
-        .energy-fill { background: #f1c40f; height: 100%; transition: width 0.3s; }
+        .energy-fill { background: #f1c40f; height: 100%; width: 100%; transition: width 0.2s; }
+        .energy-pulse {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { background-color: #f1c40f; }
+            50% { background-color: #e67e22; box-shadow: 0 0 5px #e67e22; }
+            100% { background-color: #f1c40f; }
+        }
+        .shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+            100% { transform: translateX(0); }
+        }
         .hidden { display: none; }
         #log { margin: 10px 0; padding: 6px; background: #2a2a2a; border-radius: 10px; color: #f1c40f; font-size: 13px; }
         body.light #log { background: #eee; color: #c4450c; }
         .badge { font-size: 11px; color: #888; }
-        .achievement { background: #333; border-radius: 8px; padding: 6px; margin: 4px 0; font-size: 13px; }
+        .achievement { background: #333; border-radius: 8px; padding: 6px; margin: 4px 0; font-size: 13px; transition: 0.1s; }
         .achievement.unlocked { border-left: 5px solid #f1c40f; color: #f1c40f; }
         .achievement.locked { border-left: 5px solid #666; color: #999; }
         .share-btn { background: #2ecc71; width: 100%; margin-top: 8px; }
@@ -34,7 +56,7 @@
         body.light .invest-input { background: #fff; color: #222; border-color: #ccc; }
         .chances { font-size: 11px; color: #aaa; margin: 2px 0; }
         .stat-line { font-size: 13px; color: #ccc; margin: 2px 0; }
-        .float-text { position: fixed; font-size: 24px; font-weight: bold; pointer-events: none; z-index: 1000; animation: floatUp 0.8s ease-out forwards; }
+        .float-text { position: fixed; font-size: 24px; font-weight: bold; pointer-events: none; z-index: 1000; animation: floatUp 0.8s ease-out forwards; text-shadow: 1px 1px 0 black; }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
         .pick-common { color: #fff; }
         .pick-rare { color: #2ecc71; }
@@ -51,7 +73,7 @@
 <div class="stats">
     <span class="badge" id="userIdDisplay"></span><br>
     💰 <span id="coins">150</span> 🪙<br>
-    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>) <span id="mutationBadge" style="color:#ffaa00;"></span><br>
+    🔨 <span id="pickName">Каменная</span> (ур. <span id="pickLevel">2</span>) <span id="mutationBadge"></span><br>
     <div class="chances" id="pickChances"></div>
     <div class="stat-line">⛏️ Ур. шахты: <span id="mineLevel">1</span> (лимит: <span id="mineCapacity">100</span>)</div>
     <div class="stat-line">🌡️ Глубина: <span id="depthLevel">0</span>м (опасность: <span id="dangerLevel">0</span>%)</div>
@@ -59,7 +81,7 @@
     <div class="stat-line">👆 Кликов: <span id="totalClicks">0</span></div>
     <div class="stat-line">💀 Престиж: <span id="prestigeLevel">0</span> (множитель x<span id="prestigeMultiplier">1</span>)</div>
     ⚡ <span id="energy">100</span>/<span id="maxEnergy">100</span> (тратит <span id="energyCost">1</span> за удар, +<span id="regenRate">3</span>/сек)
-    <div class="energy-bar"><div class="energy-fill" id="energyFill" style="width:100%"></div></div>
+    <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
     <div id="regenTimer" style="font-size:11px; color:#aaa;"></div>
     <div>⛏️ Всего добыто: <span id="totalOre">0</span></div>
 </div>
@@ -95,8 +117,10 @@
     <button onclick="upgradeMaxEnergy()">⚡ Увеличить макс. энергию (<span id="maxEnergyCost">200</span> 🪙)</button>
     <button onclick="upgradeRegen()">🔄 Ускорить восст. (<span id="regenCost">200</span> 🪙)</button>
     <button onclick="sellAll()">💰 Продать всё</button>
-    <button onclick="buyNPC()">🤖 Купить робота (5000 🪙)</button>
+    <button onclick="buyNPC()">🤖 Робот-помощник (5000 🪙)</button>
     <div id="npcStatus" style="font-size:11px; color:#aaa;">Робот не куплен</div>
+    <button onclick="buyRobot()">🦾 Робот-шахтёр (5000 🪙)</button>
+    <div id="robotStatus" style="font-size:11px; color:#aaa;">Не куплен</div>
     <button onclick="buyExplosive()">💣 Взрывчатка (200 🪙)</button>
     <button onclick="claimDaily()">🎁 Ежедневная награда</button>
     <button class="prestige-btn" onclick="prestige()">💀 Престиж</button>
@@ -144,8 +168,8 @@
 
 <div id="panelPets" class="panel hidden">
     <h3>🐾 Питомцы и роботы</h3>
-    <div class="pet-card"><strong>🍵 Белый чай</strong> — +1 мон/сек<br><span id="pet1Status">Не куплен</span><button onclick="buyPet('pet1')">Купить (500🪙)</button><button onclick="upgradePet('pet1')" style="display:none;">Улучшить (1000🪙)</button></div>
-    <div class="pet-card"><strong>🐾 Пупуня</strong> — +5% редкой руды<br><span id="pet2Status">Не куплен</span><button onclick="buyPet('pet2')">Купить (800🪙)</button><button onclick="upgradePet('pet2')" style="display:none;">Улучшить (1500🪙)</button></div>
+    <div class="pet-card"><strong>🍵 Белый чай</strong> — +1 мон/сек<br><span id="pet1Status">Не куплен</span><button id="buyPet1Btn" onclick="buyPet('pet1')">Купить (500🪙)</button><button id="upgradePet1Btn" onclick="upgradePet('pet1')" style="display:none;">Улучшить (1000🪙)</button></div>
+    <div class="pet-card"><strong>🐾 Пупуня</strong> — +5% редкой руды<br><span id="pet2Status">Не куплен</span><button id="buyPet2Btn" onclick="buyPet('pet2')">Купить (800🪙)</button><button id="upgradePet2Btn" onclick="upgradePet('pet2')" style="display:none;">Улучшить (1500🪙)</button></div>
 </div>
 
 <div id="panelBoss" class="panel hidden">
@@ -185,9 +209,7 @@
 <script>
     window.Telegram.WebApp.ready();
 
-    // Принудительно сбрасываем старые сохранения, чтобы питомцы заработали
-    localStorage.removeItem('shakhter_save');
-
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
     const LANG = {
         ru: {
             mine: '⛏️ Копать', noEnergy: '😴 Нет энергии', sell: '💰 Продать всё', upgrade: '🔨 Улучшить кирку',
@@ -201,13 +223,11 @@
             energyFull: 'Энергия полная', energyNext: 'Полная через', energyBought: 'Энергия восстановлена!',
             investWin: '📈 Инвестиция успешна! +', investLose: '📉 Инвестиция провалилась! -',
             investError: 'Введите сумму', investNoMoney: 'Недостаточно монет',
-            petsTitle: '🐾 Питомцы',
-            pet1Name: 'Белый чай', pet1Desc: '+1 мон/сек', pet2Name: 'Пупуня', pet2Desc: '+5% редкой руды',
-            petBuy: 'Купить', petUpgrade: 'Улучшить',
-            petStatusNotBought: 'Не куплен', petStatusBought: 'Куплен (ур.',
-            npcNotOwned: 'Робот не куплен', npcOwned: 'Робот работает!',
-            inventoryTitle: '🎒 Инвентарь',
-            stoneName: 'Камень', ironName: 'Железо', goldName: 'Золото', diamondName: 'Алмазы', mithrilName: 'Мифрил',
+            petsTitle: '🐾 Питомцы', pet1Name: 'Белый чай', pet1Desc: '+1 мон/сек', pet2Name: 'Пупуня', pet2Desc: '+5% редкой руды',
+            petBuy: 'Купить', petUpgrade: 'Улучшить', petStatusNotBought: 'Не куплен', petStatusBought: 'Куплен (ур.',
+            npcNotOwned: 'Робот-помощник не куплен', npcOwned: 'Робот-помощник работает!',
+            robotNotOwned: 'Робот-шахтёр не куплен', robotOwned: 'Робот-шахтёр добывает камень!',
+            inventoryTitle: '🎒 Инвентарь', stoneName: 'Камень', ironName: 'Железо', goldName: 'Золото', diamondName: 'Алмазы', mithrilName: 'Мифрил',
             tabMineName: 'Шахта', tabMarketName: 'Рынок', tabShopName: 'Магазин', tabFortuneName: 'Азарт',
             tabAchieveName: 'Достижения', tabPetsName: 'Питомцы', tabSettingsName: 'Настройки', tabGuideName: 'Справочник',
             ach1Text: 'Новичок — 10 камней', ach2Text: 'Счастливчик — алмаз', ach3Text: 'Богач — 1000 монет', ach4Text: 'Магнат — 5 мифрила', ach5Text: 'Кризис — 1000 энергии'
@@ -223,13 +243,11 @@
             maxLevel: 'Max level', upgradeCost: 'Cost: ', upgradeBtn: '🔨 Upgrade',
             energyFull: 'Energy full', energyNext: 'Full in', energyBought: 'Energy restored!',
             investWin: '📈 Won! +', investLose: '📉 Lost! -', investError: 'Enter amount', investNoMoney: 'Not enough coins',
-            petsTitle: '🐾 Pets',
-            pet1Name: 'White Tea', pet1Desc: '+1 coin/sec', pet2Name: 'Pupunya', pet2Desc: '+5% rare ore',
-            petBuy: 'Buy', petUpgrade: 'Upgrade',
-            petStatusNotBought: 'Not bought', petStatusBought: 'Bought (lvl.',
-            npcNotOwned: 'Robot not owned', npcOwned: 'Robot works!',
-            inventoryTitle: '🎒 Inventory',
-            stoneName: 'Stone', ironName: 'Iron', goldName: 'Gold', diamondName: 'Diamonds', mithrilName: 'Mithril',
+            petsTitle: '🐾 Pets', pet1Name: 'White Tea', pet1Desc: '+1 coin/sec', pet2Name: 'Pupunya', pet2Desc: '+5% rare ore',
+            petBuy: 'Buy', petUpgrade: 'Upgrade', petStatusNotBought: 'Not bought', petStatusBought: 'Bought (lvl.',
+            npcNotOwned: 'Helper robot not owned', npcOwned: 'Helper robot works!',
+            robotNotOwned: 'Miner robot not owned', robotOwned: 'Miner robot mines stone!',
+            inventoryTitle: '🎒 Inventory', stoneName: 'Stone', ironName: 'Iron', goldName: 'Gold', diamondName: 'Diamonds', mithrilName: 'Mithril',
             tabMineName: 'Mine', tabMarketName: 'Market', tabShopName: 'Shop', tabFortuneName: 'Gamble',
             tabAchieveName: 'Achievements', tabPetsName: 'Pets', tabSettingsName: 'Settings', tabGuideName: 'Guide',
             ach1Text: 'Beginner — 10 stones', ach2Text: 'Lucky — diamond', ach3Text: 'Rich — 1000 coins', ach4Text: 'Tycoon — 5 mithril', ach5Text: 'Crisis — 1000 energy'
@@ -237,6 +255,7 @@
     };
     let lang = localStorage.getItem('lang') || 'ru';
 
+    // Игровые переменные
     let coins = 150, energy = 100, maxEnergy = 100, pickLevel = 2, totalOre = 0, totalStone = 0, totalDiamondFound = false, totalMithril = 0, totalEnergySpent = 0;
     let totalClicks = 0, totalPlayTime = 0;
     let inventory = { stone: 0, iron: 0, gold: 0, diamond: 0, mithril: 0 };
@@ -248,18 +267,19 @@
     let prestigeLevel = 0, prestigeMultiplier = 1;
     let maxEnergyUpgradeLevel = 0, maxEnergyCost = 200, regenUpgradeLevel = 0, regenCost = 200, regenRate = 3;
     let npcOwned = false, npcMineInterval = null;
+    let robotOwned = false, robotInterval = null;
     let mineLevel = 1, mineCapacity = 100, mineUpgradeCost = 1000;
     let mutationLevel = 0;
     const mutationNames = ['', '🔥 Огненная', '❄️ Ледяная', '✨ Золотая'];
     let depthLevel = 0;
     let bossHP = 0, bossMaxHP = 50, bossActive = false, bossWeek = 0;
     let explosives = 0;
-    let robotOwned = false, robotInterval = null;
     let pets = {
         pet1: { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0, nameKey: 'pet1Name', descKey: 'pet1Desc' },
         pet2: { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0, nameKey: 'pet2Name', descKey: 'pet2Desc' }
     };
 
+    // Генерация 200 кирок
     const PICKAXES = [];
     for (let i = 1; i <= 200; i++) {
         let energyCost = Math.min(10, Math.floor(i / 20) + 1);
@@ -273,6 +293,7 @@
         PICKAXES.push({ level: i, name: name, energyCost: energyCost, multiChance: multiChance, maxMulti: maxMulti });
     }
 
+    // Карты духов
     const SPIRIT_CARDS = [
         { name: 'Дух Седого Крота', bonus: 'stoneChance', value: 5, desc: '+5% камня' },
         { name: 'Пламя Железной Жилы', bonus: 'ironChance', value: 8, desc: '+8% железа' },
@@ -288,142 +309,28 @@
     let collectedCards = JSON.parse(localStorage.getItem('collectedCards') || '[]');
     let clicksWithoutCard = parseInt(localStorage.getItem('clicksWithoutCard') || '0');
 
-    function saveGame() {
-        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, prestigeLevel, prestigeMultiplier, maxEnergyUpgradeLevel, maxEnergyCost, regenUpgradeLevel, regenCost, regenRate, npcOwned, mineLevel, mineCapacity, mineUpgradeCost, mutationLevel, depthLevel, bossHP, bossActive, bossWeek, explosives, robotOwned, lastTimestamp: Date.now(), pets };
-        localStorage.setItem('shakhter_save', JSON.stringify(data));
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+    function showFloatingText(text, x, y) {
+        let div = document.createElement('div');
+        div.className = 'float-text';
+        div.innerText = text;
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 800);
     }
 
-    function loadGame() {
-        let saved = localStorage.getItem('shakhter_save');
-        if (saved) {
-            try {
-                let d = JSON.parse(saved);
-                coins = d.coins ?? 150; if (isNaN(coins)) coins = 150;
-                energy = d.energy ?? 100; energy = Number(energy);
-                maxEnergy = d.maxEnergy ?? 100;
-                pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
-                totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
-                totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
-                totalClicks = d.totalClicks || 0; totalPlayTime = d.totalPlayTime || 0;
-                prestigeLevel = d.prestigeLevel || 0; prestigeMultiplier = d.prestigeMultiplier || 1;
-                maxEnergyUpgradeLevel = d.maxEnergyUpgradeLevel || 0; maxEnergyCost = d.maxEnergyCost || 200;
-                regenUpgradeLevel = d.regenUpgradeLevel || 0; regenCost = d.regenCost || 200; regenRate = d.regenRate || 3;
-                npcOwned = d.npcOwned || false;
-                mineLevel = d.mineLevel || 1; mineCapacity = d.mineCapacity || 100; mineUpgradeCost = d.mineUpgradeCost || 1000;
-                mutationLevel = d.mutationLevel || 0; depthLevel = d.depthLevel || 0;
-                bossHP = d.bossHP || 0; bossActive = d.bossActive || false; bossWeek = d.bossWeek || 0;
-                explosives = d.explosives || 0; robotOwned = d.robotOwned || false;
-                inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
-                lastTimestamp = d.lastTimestamp || Date.now();
-                if (d.pets) { pets.pet1 = d.pets.pet1 || pets.pet1; pets.pet2 = d.pets.pet2 || pets.pet2; }
-                if (npcOwned && !npcMineInterval) startNPC();
-                if (robotOwned && !robotInterval) startRobot();
-                if (bossActive && bossWeek !== getCurrentWeek()) { bossActive = false; bossHP = 0; }
-            } catch(e) { resetGame(); }
-        } else { resetGame(); }
-        updateUI();
-    }
-
-    function resetGame() {
-        coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
-        totalClicks = 0; totalPlayTime = 0; prestigeLevel = 0; prestigeMultiplier = 1;
-        maxEnergyUpgradeLevel = 0; maxEnergyCost = 200; regenUpgradeLevel = 0; regenCost = 200; regenRate = 3;
-        npcOwned = false; mineLevel = 1; mineCapacity = 100; mineUpgradeCost = 1000; mutationLevel = 0; depthLevel = 0;
-        bossHP = 0; bossActive = false; bossWeek = 0; explosives = 0; robotOwned = false;
-        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 }; lastTimestamp = Date.now();
-        pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0 };
-        pets.pet2 = { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0 };
-        if (npcMineInterval) clearInterval(npcMineInterval);
-        if (robotInterval) clearInterval(robotInterval);
-    }
-
-    function updateUI() {
-        if (isNaN(coins)) coins = 150;
-        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
-        document.getElementById('coins').innerText = coins;
-        document.getElementById('energy').innerText = energy;
-        document.getElementById('maxEnergy').innerText = maxEnergy;
-        document.getElementById('regenRate').innerText = regenRate;
-        document.getElementById('pickName').innerText = pick.name;
-        document.getElementById('pickLevel').innerText = pickLevel;
-        document.getElementById('energyCost').innerText = pick.energyCost;
-        document.getElementById('totalOre').innerText = totalOre;
-        document.getElementById('prestigeLevel').innerText = prestigeLevel;
-        document.getElementById('prestigeMultiplier').innerText = prestigeMultiplier;
-        document.getElementById('stone').innerText = inventory.stone;
-        document.getElementById('iron').innerText = inventory.iron;
-        document.getElementById('gold').innerText = inventory.gold;
-        document.getElementById('diamond').innerText = inventory.diamond;
-        document.getElementById('mithril').innerText = inventory.mithril;
-        document.getElementById('energyFill').style.width = (energy / maxEnergy * 100) + '%';
-        document.getElementById('pickUpgradeCost').innerText = pickLevel >= 200 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
-        document.getElementById('playTime').innerText = formatTime(totalPlayTime);
-        document.getElementById('totalClicks').innerText = totalClicks;
-        document.getElementById('mineLevel').innerText = mineLevel;
-        document.getElementById('mineCapacity').innerText = mineCapacity;
-        document.getElementById('mineUpgradeCostDisplay').innerText = mineUpgradeCost;
-        document.getElementById('depthLevel').innerText = depthLevel;
-        document.getElementById('dangerLevel').innerText = Math.min(95, depthLevel * 3);
-        document.getElementById('mutationBadge').innerText = mutationLevel ? mutationNames[mutationLevel] : '';
-        document.getElementById('maxEnergyCost').innerText = maxEnergyCost;
-        document.getElementById('regenCost').innerText = regenCost;
-        let pickColor = 'pick-common';
-        if (pickLevel <= 10) pickColor = 'pick-common';
-        else if (pickLevel <= 40) pickColor = 'pick-rare';
-        else if (pickLevel <= 100) pickColor = 'pick-epic';
-        else if (pickLevel <= 160) pickColor = 'pick-legendary';
-        else pickColor = 'pick-mythic';
-        document.getElementById('pickName').className = pickColor;
-        let chances = getOreChances(pickLevel);
-        document.getElementById('pickChances').innerHTML = `🗿${chances[0].toFixed(1)}% ⚙️${chances[1].toFixed(1)}% 🥇${chances[2].toFixed(1)}% 💎${chances[3].toFixed(1)}% 💠${chances[4].toFixed(1)}%`;
-        let btn = document.getElementById('mineBtn');
-        if (energy < pick.energyCost) { btn.innerText = LANG[lang].noEnergy; btn.style.opacity = '0.6'; }
-        else { btn.innerText = LANG[lang].mine; btn.style.opacity = '1'; }
-        let sec = energy >= maxEnergy ? 0 : Math.ceil((maxEnergy - energy) / regenRate);
-        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? LANG[lang].energyFull : `Полная через ${sec}с`;
-        if (window.Telegram.WebApp.initDataUnsafe?.user) document.getElementById('userIdDisplay').innerText = 'ID: ' + window.Telegram.WebApp.initDataUnsafe.user.id;
-        document.getElementById('ach1').className = totalStone >= 10 ? 'achievement unlocked' : 'achievement locked';
-        document.getElementById('ach2').className = totalDiamondFound ? 'achievement unlocked' : 'achievement locked';
-        document.getElementById('ach3').className = coins >= 1000 ? 'achievement unlocked' : 'achievement locked';
-        document.getElementById('ach4').className = totalMithril >= 5 ? 'achievement unlocked' : 'achievement locked';
-        document.getElementById('ach5').className = totalEnergySpent >= 1000 ? 'achievement unlocked' : 'achievement locked';
-        if (bossActive) { document.getElementById('bossHP').innerText = `Здоровье: ${bossHP}/${bossMaxHP}`; }
-        else { document.getElementById('bossHP').innerText = 'Босс не активен'; }
-        updatePetUI('pet1'); updatePetUI('pet2');
+    function addLog(msg) { 
+        let logDiv = document.getElementById('log');
+        logDiv.innerText = msg;
+        setTimeout(() => { if(logDiv.innerText === msg) logDiv.innerText = ''; }, 3000);
     }
 
     function formatTime(sec) { let h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60; return `${h}ч ${m}м ${s}с`; }
-    function updatePetUI(petKey) {
-        let pet = pets[petKey];
-        let prefix = petKey === 'pet1' ? 'pet1' : 'pet2';
-        let statusEl = document.getElementById(prefix + 'Status');
-        let buyBtn = document.getElementById('buy' + (petKey === 'pet1' ? 'Pet1' : 'Pet2') + 'Btn');
-        let upgradeBtn = document.getElementById('upgrade' + (petKey === 'pet1' ? 'Pet1' : 'Pet2') + 'Btn');
-        if (pet.owned) {
-            statusEl.innerText = LANG[lang].petStatusBought + pet.level + ')';
-            buyBtn.style.display = 'none';
-            if (pet.level < pet.maxLevel) {
-                upgradeBtn.style.display = 'inline-block';
-                upgradeBtn.innerText = LANG[lang].petUpgrade + ' (' + pet.upgradeCost + '🪙)';
-            } else {
-                upgradeBtn.style.display = 'none';
-            }
-        } else {
-            statusEl.innerText = LANG[lang].petStatusNotBought;
-            buyBtn.style.display = 'inline-block';
-            buyBtn.innerText = LANG[lang].petBuy + ' ' + pet.baseCost + '🪙';
-            upgradeBtn.style.display = 'none';
-        }
-    }
-    function addLog(text) { document.getElementById('log').innerText = text; }
-    function switchTab(tab) {
-        let tabs = ['mine','market','shop','fortune','achieve','pets','boss','settings','guide'];
-        tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
-        tabs.forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('tab-active'));
-        document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
-        if (tab === 'market') updateMarketDisplay();
-    }
 
+    function getCurrentWeek() { let now = new Date(); let start = new Date(now.getFullYear(), 0, 1); return Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7); }
+
+    // ========== ОСНОВНЫЕ МЕХАНИКИ ==========
     function getOreChances(lvl) {
         let base = [70 - lvl*0.4, 20 + lvl*0.2, 10 + lvl*0.15, 0 + lvl*0.1, 0];
         if (lvl >= 40) base = [50, 25, 15, 7, 3];
@@ -458,6 +365,12 @@
         energy -= pick.energyCost;
         totalEnergySpent += pick.energyCost;
         totalClicks++;
+        
+        // Анимация тряски кнопки
+        let btn = document.getElementById('mineBtn');
+        btn.classList.add('shake');
+        setTimeout(() => btn.classList.remove('shake'), 300);
+        
         let chances = getOreChances(pickLevel);
         let r = Math.random() * 100;
         let count = buffDoubleOre ? 2 : 1;
@@ -472,9 +385,15 @@
         else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; ore = '💎 Алмаз'; }
         else { inventory.mithril += count; totalMithril += count; ore = '💠 Мифрил'; }
         totalOre += count;
+        
+        // Скрытая комната
         if (Math.random() < 0.02) { let bonus = Math.floor(Math.random() * 50) + 20; coins += bonus; addLog(`🕍 Скрытая комната! Найдено ${bonus} монет!`); }
-        if (event) { let rect = event.target.getBoundingClientRect(); showFloatingText('+' + count + ' ' + ore, rect.left + rect.width/2 - 30, rect.top - 30); }
-        try { if (window.navigator?.vibrate) navigator.vibrate(35*count); } catch(e) {}
+        
+        if (event) { 
+            let rect = event.target.getBoundingClientRect();
+            showFloatingText('+' + count + ' ' + ore, rect.left + rect.width/2 - 30, rect.top - 30); 
+        }
+        if (window.navigator?.vibrate) navigator.vibrate(35 * Math.min(count, 10));
         addLog(`${LANG[lang].logMined} ${ore} x${count}`);
         saveGame(); updateUI();
     }
@@ -489,7 +408,6 @@
         inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
         addLog(`💰 Продано за ${total} 🪙. Налог: ${tax} 🪙`);
         saveGame(); updateUI();
-        buffDoubleSell = false;
     }
 
     function upgradePick() {
@@ -537,26 +455,9 @@
         saveGame(); updateUI(); showActiveBuffs();
     }
 
-    setInterval(() => {
-        let now = Date.now();
-        if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
-        if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
-        showActiveBuffs();
-        if (pets.pet1.owned && pets.pet1.level > 0) {
-            let interval = 1000;
-            if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
-            if (now - pets.pet1.lastPaid >= interval) { coins += 1 * pets.pet1.level; pets.pet1.lastPaid = now - ((now - pets.pet1.lastPaid) % interval); updateUI(); }
-        }
-        if (energy < maxEnergy) { let diff = Math.floor((now - lastTimestamp) / 1000); if (diff >= 1) { energy = Math.min(maxEnergy, energy + diff * regenRate); lastTimestamp = now; } }
-        updateUI();
-    }, 1000);
-
     function showActiveBuffs() { let el = document.getElementById('activeBuffs'); el.innerHTML = (buffDoubleOre?LANG[lang].buffOre+'<br>':'') + (buffDoubleSell?LANG[lang].buffSell+'<br>':'') || 'Нет активных баффов'; }
 
     function updateMarketDisplay() { let html = ''; for (let ore in market) html += `<div>${ore}: ${market[ore]} 🪙</div>`; document.getElementById('marketPrices').innerHTML = html; }
-
-    setInterval(() => { for (let ore in market) { let change = (Math.random() * 0.4) - 0.2; market[ore] = Math.max(1, Math.round(market[ore] * (1 + change))); } updateMarketDisplay(); }, 600000);
-    setInterval(() => { totalPlayTime++; saveGame(); document.getElementById('playTime').innerText = formatTime(totalPlayTime); }, 1000);
 
     function spinWheel() {
         if (coins < 50) { addLog('Не хватает 50 монет'); return; } coins -= 50;
@@ -565,39 +466,298 @@
         addLog(LANG[lang].wheelPrize + prize); saveGame(); updateUI();
     }
 
-    function invest() { let amount = parseInt(document.getElementById('investAmount').value); if (isNaN(amount) || amount <= 0) { addLog(LANG[lang].investError); return; } if (coins < amount) { addLog(LANG[lang].investNoMoney); return; } let success = Math.random() < 0.5; if (success) { coins += amount; addLog(LANG[lang].investWin + amount + ' монет'); } else { coins -= amount; addLog(LANG[lang].investLose + amount + ' монет'); } document.getElementById('investAmount').value = ''; saveGame(); updateUI(); }
+    function invest() { 
+        let amount = parseInt(document.getElementById('investAmount').value); 
+        if (isNaN(amount) || amount <= 0) { addLog(LANG[lang].investError); return; } 
+        if (coins < amount) { addLog(LANG[lang].investNoMoney); return; } 
+        let success = Math.random() < 0.5; 
+        if (success) { coins += amount; addLog(LANG[lang].investWin + amount + ' монет'); } 
+        else { coins -= amount; addLog(LANG[lang].investLose + amount + ' монет'); } 
+        document.getElementById('investAmount').value = ''; saveGame(); updateUI(); 
+    }
 
-    function craft(from, to) { let cost, amount; if (from === 'stone' && to === 'iron') { cost=10; amount=1; } else if (from === 'iron' && to === 'gold') { cost=5; amount=1; } else if (from === 'gold' && to === 'diamond') { cost=5; amount=1; } else if (from === 'diamond' && to === 'mithril') { cost=3; amount=1; } if (inventory[from] >= cost) { inventory[from] -= cost; inventory[to] += amount; addLog(`Обмен: ${cost} ${from} → ${amount} ${to}`); saveGame(); updateUI(); } else addLog('Недостаточно ресурсов!'); }
+    function craft(from, to) { 
+        let cost, amount; 
+        if (from === 'stone' && to === 'iron') { cost=10; amount=1; } 
+        else if (from === 'iron' && to === 'gold') { cost=5; amount=1; } 
+        else if (from === 'gold' && to === 'diamond') { cost=5; amount=1; } 
+        else if (from === 'diamond' && to === 'mithril') { cost=3; amount=1; } 
+        if (inventory[from] >= cost) { inventory[from] -= cost; inventory[to] += amount; addLog(`Обмен: ${cost} ${from} → ${amount} ${to}`); saveGame(); updateUI(); } 
+        else addLog('Недостаточно ресурсов!'); 
+    }
 
-    function openChest() { if (coins < 50) { addLog('Не хватает 50 монет!'); return; } coins -= 50; let prizes = [{ type: 'coins', amount: 100 }, { type: 'ore', ore: 'diamond', amount: 1 }, { type: 'buff', buff: 'ore' }]; let prize = prizes[Math.floor(Math.random() * prizes.length)]; if (prize.type === 'coins') coins += prize.amount; else if (prize.type === 'ore') inventory[prize.ore] = (inventory[prize.ore] || 0) + prize.amount; else if (prize.type === 'buff') { buffDoubleOre = true; buffDoubleOreEnd = Date.now() + 15000; } addLog('🎁 Сундук открыт!'); saveGame(); updateUI(); }
+    function openChest() { 
+        if (coins < 50) { addLog('Не хватает 50 монет!'); return; } 
+        coins -= 50; 
+        let prizes = [{ type: 'coins', amount: 100 }, { type: 'ore', ore: 'diamond', amount: 1 }, { type: 'buff', buff: 'ore' }]; 
+        let prize = prizes[Math.floor(Math.random() * prizes.length)]; 
+        if (prize.type === 'coins') coins += prize.amount; 
+        else if (prize.type === 'ore') inventory[prize.ore] = (inventory[prize.ore] || 0) + prize.amount; 
+        else if (prize.type === 'buff') { buffDoubleOre = true; buffDoubleOreEnd = Date.now() + 15000; } 
+        addLog('🎁 Сундук открыт!'); saveGame(); updateUI(); 
+    }
 
-    function getCurrentWeek() { let now = new Date(); let start = new Date(now.getFullYear(), 0, 1); return Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7); }
-    function checkBoss() { let week = getCurrentWeek(); if (!bossActive && bossWeek !== week) { bossActive = true; bossWeek = week; bossHP = bossMaxHP; addLog('👾 Еженедельный босс появился!'); saveGame(); } }
-    function attackBoss() { if (!bossActive) { addLog('Босс не активен.'); return; } if (energy < 5) { addLog('Не хватает энергии!'); return; } energy -= 5; let damage = Math.floor(Math.random() * 10) + 5; bossHP -= damage; if (bossHP <= 0) { bossActive = false; let reward = Math.floor(Math.random() * 3) + 1; inventory.diamond += reward; addLog(`👾 Босс побеждён! Получено ${reward} алмазов.`); } saveGame(); updateUI(); }
+    function checkBoss() { 
+        let week = getCurrentWeek(); 
+        if (!bossActive && bossWeek !== week) { bossActive = true; bossWeek = week; bossHP = bossMaxHP; addLog('👾 Еженедельный босс появился!'); saveGame(); } 
+    }
+    function attackBoss() { 
+        if (!bossActive) { addLog('Босс не активен.'); return; } 
+        if (energy < 5) { addLog('Не хватает энергии!'); return; } 
+        energy -= 5; let damage = Math.floor(Math.random() * 10) + 5; bossHP -= damage; 
+        if (bossHP <= 0) { bossActive = false; let reward = Math.floor(Math.random() * 3) + 1; inventory.diamond += reward; addLog(`👾 Босс побеждён! Получено ${reward} алмазов.`); } 
+        saveGame(); updateUI(); 
+    }
 
     function buyExplosive() { if (coins < 200) { addLog('Не хватает 200 монет!'); return; } coins -= 200; explosives++; saveGame(); updateUI(); }
 
-    function buyNPC() { if (npcOwned) { addLog('Робот уже куплен!'); return; } if (coins < 5000) { addLog('Не хватает 5000 монет!'); return; } coins -= 5000; npcOwned = true; startNPC(); saveGame(); updateUI(); }
-    function startNPC() { if (npcMineInterval) clearInterval(npcMineInterval); npcMineInterval = setInterval(() => { npcMine(); updateUI(); }, 2000); }
-    function npcMine() { let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1]; let chances = getOreChances(pickLevel); let r = Math.random() * 100; let count = 1; if (r < chances[0]) { inventory.stone += count; totalStone += count; } else if (r < chances[0]+chances[1]) { inventory.iron += count; } else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; } else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; } else { inventory.mithril += count; totalMithril += count; } totalOre += count; saveGame(); }
+    function buyNPC() { 
+        if (npcOwned) { addLog('Робот-помощник уже куплен!'); return; } 
+        if (coins < 5000) { addLog('Не хватает 5000 монет!'); return; } 
+        coins -= 5000; npcOwned = true; startNPC(); saveGame(); updateUI(); 
+    }
+    function startNPC() { 
+        if (npcMineInterval) clearInterval(npcMineInterval); 
+        npcMineInterval = setInterval(() => { 
+            let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1]; 
+            let chances = getOreChances(pickLevel); let r = Math.random() * 100; let count = 1; 
+            if (r < chances[0]) { inventory.stone += count; totalStone += count; } 
+            else if (r < chances[0]+chances[1]) { inventory.iron += count; } 
+            else if (r < chances[0]+chances[1]+chances[2]) { inventory.gold += count; } 
+            else if (r < chances[0]+chances[1]+chances[2]+chances[3]) { inventory.diamond += count; totalDiamondFound = true; } 
+            else { inventory.mithril += count; totalMithril += count; } 
+            totalOre += count; saveGame(); updateUI(); 
+        }, 2000); 
+    }
 
-    function buyRobot() { if (robotOwned) { addLog('Уже куплен!'); return; } if (coins < 5000) { addLog('Не хватает 5000 монет!'); return; } coins -= 5000; robotOwned = true; startRobot(); saveGame(); updateUI(); }
-    function startRobot() { if (robotInterval) clearInterval(robotInterval); robotInterval = setInterval(() => { if (robotOwned) { inventory.stone += 2; totalStone += 2; totalOre += 2; saveGame(); updateUI(); } }, 3000); }
+    function buyRobot() { 
+        if (robotOwned) { addLog('Робот-шахтёр уже куплен!'); return; } 
+        if (coins < 5000) { addLog('Не хватает 5000 монет!'); return; } 
+        coins -= 5000; robotOwned = true; startRobot(); saveGame(); updateUI(); 
+    }
+    function startRobot() { 
+        if (robotInterval) clearInterval(robotInterval); 
+        robotInterval = setInterval(() => { 
+            if (robotOwned) { inventory.stone += 2; totalStone += 2; totalOre += 2; saveGame(); updateUI(); } 
+        }, 3000); 
+    }
 
-    function prestige() { if (coins < 100000) { addLog('Нужно 100 000 монет для престижа!'); return; } if (!confirm('Сбросить ВЕСЬ прогресс ради вечного множителя?')) return; coins = 150; prestigeLevel++; prestigeMultiplier++; if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0; totalClicks = 0; totalPlayTime = 0; inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 }; energy = maxEnergy; lastTimestamp = Date.now(); saveGame(); updateUI(); addLog(`💀 Престиж ${prestigeLevel}! Множитель теперь x${prestigeMultiplier}`); }
+    function prestige() { 
+        if (coins < 100000) { addLog('Нужно 100 000 монет для престижа!'); return; } 
+        if (!confirm('Сбросить ВЕСЬ прогресс ради вечного множителя?')) return; 
+        coins = 150; prestigeLevel++; prestigeMultiplier++; 
+        if (collectedCards.includes(8)) prestigeMultiplier += SPIRIT_CARDS[8].value; 
+        pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0; totalClicks = 0; totalPlayTime = 0; 
+        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 }; energy = maxEnergy; lastTimestamp = Date.now(); 
+        saveGame(); updateUI(); addLog(`💀 Престиж ${prestigeLevel}! Множитель теперь x${prestigeMultiplier}`); 
+    }
 
-    function claimDaily() { let now = Date.now(); if (now - lastDaily < 86400000) { let left = Math.ceil((86400000 - (now - lastDaily)) / 3600000); addLog(`${LANG[lang].dailyWait} ${left} ч.`); return; } coins += 50; energy = maxEnergy; lastDaily = now; localStorage.setItem('lastDaily', lastDaily); addLog(LANG[lang].dailyClaim); saveGame(); updateUI(); }
+    function claimDaily() { 
+        let now = Date.now(); 
+        if (now - lastDaily < 86400000) { let left = Math.ceil((86400000 - (now - lastDaily)) / 3600000); addLog(`${LANG[lang].dailyWait} ${left} ч.`); return; } 
+        coins += 50; energy = maxEnergy; lastDaily = now; localStorage.setItem('lastDaily', lastDaily); addLog(LANG[lang].dailyClaim); saveGame(); updateUI(); 
+    }
+
+    // Питомцы
+    function buyPet(petId) {
+        let pet = pets[petId];
+        if (pet.owned) { addLog('Уже куплен!'); return; }
+        let cost = pet.baseCost;
+        if (coins < cost) { addLog('Не хватает монет!'); return; }
+        coins -= cost;
+        pet.owned = true;
+        pet.level = 1;
+        addLog(`🐾 Питомец ${LANG[lang][pet.nameKey]} куплен! Уровень 1`);
+        saveGame(); updateUI();
+    }
+    function upgradePet(petId) {
+        let pet = pets[petId];
+        if (!pet.owned) { addLog('Сначала купите питомца'); return; }
+        if (pet.level >= pet.maxLevel) { addLog('Максимальный уровень!'); return; }
+        let cost = pet.upgradeCost;
+        if (coins < cost) { addLog('Не хватает монет!'); return; }
+        coins -= cost;
+        pet.level++;
+        addLog(`⬆️ Питомец ${LANG[lang][pet.nameKey]} улучшен до ур. ${pet.level}`);
+        saveGame(); updateUI();
+    }
+
+    // ========== UI И АНИМАЦИИ ==========
+    function updateUI() {
+        if (isNaN(coins)) coins = 150;
+        let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1];
+        document.getElementById('coins').innerText = Math.floor(coins);
+        document.getElementById('energy').innerText = Math.floor(energy);
+        document.getElementById('maxEnergy').innerText = maxEnergy;
+        document.getElementById('regenRate').innerText = regenRate;
+        document.getElementById('pickName').innerText = pick.name;
+        document.getElementById('pickLevel').innerText = pickLevel;
+        document.getElementById('energyCost').innerText = pick.energyCost;
+        document.getElementById('totalOre').innerText = totalOre;
+        document.getElementById('prestigeLevel').innerText = prestigeLevel;
+        document.getElementById('prestigeMultiplier').innerText = prestigeMultiplier;
+        document.getElementById('stone').innerText = inventory.stone;
+        document.getElementById('iron').innerText = inventory.iron;
+        document.getElementById('gold').innerText = inventory.gold;
+        document.getElementById('diamond').innerText = inventory.diamond;
+        document.getElementById('mithril').innerText = inventory.mithril;
+        let fillPercent = (energy / maxEnergy * 100);
+        document.getElementById('energyFill').style.width = fillPercent + '%';
+        // Пульсация при <20% энергии
+        let energyFillDiv = document.getElementById('energyFill');
+        if (energy / maxEnergy < 0.2 && energy < maxEnergy) energyFillDiv.classList.add('energy-pulse');
+        else energyFillDiv.classList.remove('energy-pulse');
+        
+        document.getElementById('pickUpgradeCost').innerHTML = pickLevel >= 200 ? LANG[lang].maxLevel : LANG[lang].upgradeCost + (pickLevel * 300) + ' 🪙';
+        document.getElementById('playTime').innerText = formatTime(totalPlayTime);
+        document.getElementById('totalClicks').innerText = totalClicks;
+        document.getElementById('mineLevel').innerText = mineLevel;
+        document.getElementById('mineCapacity').innerText = mineCapacity;
+        document.getElementById('mineUpgradeCostDisplay').innerText = mineUpgradeCost;
+        document.getElementById('depthLevel').innerText = Math.floor(depthLevel);
+        document.getElementById('dangerLevel').innerText = Math.min(95, depthLevel * 3);
+        document.getElementById('mutationBadge').innerHTML = mutationLevel ? mutationNames[mutationLevel] : '';
+        document.getElementById('maxEnergyCost').innerHTML = maxEnergyCost;
+        document.getElementById('regenCost').innerHTML = regenCost;
+        let pickColor = 'pick-common';
+        if (pickLevel <= 10) pickColor = 'pick-common';
+        else if (pickLevel <= 40) pickColor = 'pick-rare';
+        else if (pickLevel <= 100) pickColor = 'pick-epic';
+        else if (pickLevel <= 160) pickColor = 'pick-legendary';
+        else pickColor = 'pick-mythic';
+        document.getElementById('pickName').className = pickColor;
+        let chances = getOreChances(pickLevel);
+        document.getElementById('pickChances').innerHTML = `🗿${chances[0].toFixed(1)}% ⚙️${chances[1].toFixed(1)}% 🥇${chances[2].toFixed(1)}% 💎${chances[3].toFixed(1)}% 💠${chances[4].toFixed(1)}%`;
+        let btn = document.getElementById('mineBtn');
+        if (energy < pick.energyCost) { btn.innerText = LANG[lang].noEnergy; btn.style.opacity = '0.6'; }
+        else { btn.innerText = LANG[lang].mine; btn.style.opacity = '1'; }
+        let sec = energy >= maxEnergy ? 0 : Math.ceil((maxEnergy - energy) / regenRate);
+        document.getElementById('regenTimer').innerText = energy >= maxEnergy ? LANG[lang].energyFull : `${LANG[lang].energyNext} ${sec}с`;
+        if (window.Telegram.WebApp.initDataUnsafe?.user) document.getElementById('userIdDisplay').innerText = 'ID: ' + window.Telegram.WebApp.initDataUnsafe.user.id;
+        document.getElementById('ach1').className = totalStone >= 10 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach2').className = totalDiamondFound ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach3').className = coins >= 1000 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach4').className = totalMithril >= 5 ? 'achievement unlocked' : 'achievement locked';
+        document.getElementById('ach5').className = totalEnergySpent >= 1000 ? 'achievement unlocked' : 'achievement locked';
+        if (bossActive) { document.getElementById('bossHP').innerText = `Здоровье: ${bossHP}/${bossMaxHP}`; }
+        else { document.getElementById('bossHP').innerText = 'Босс не активен'; }
+        
+        // Питомцы UI
+        let pet1 = pets.pet1;
+        let pet2 = pets.pet2;
+        document.getElementById('pet1Status').innerText = pet1.owned ? `${LANG[lang].petStatusBought}${pet1.level})` : LANG[lang].petStatusNotBought;
+        document.getElementById('buyPet1Btn').style.display = pet1.owned ? 'none' : 'inline-block';
+        document.getElementById('upgradePet1Btn').style.display = (pet1.owned && pet1.level < pet1.maxLevel) ? 'inline-block' : 'none';
+        document.getElementById('upgradePet1Btn').innerText = LANG[lang].petUpgrade + ' (' + pet1.upgradeCost + '🪙)';
+        document.getElementById('pet2Status').innerText = pet2.owned ? `${LANG[lang].petStatusBought}${pet2.level})` : LANG[lang].petStatusNotBought;
+        document.getElementById('buyPet2Btn').style.display = pet2.owned ? 'none' : 'inline-block';
+        document.getElementById('upgradePet2Btn').style.display = (pet2.owned && pet2.level < pet2.maxLevel) ? 'inline-block' : 'none';
+        document.getElementById('upgradePet2Btn').innerText = LANG[lang].petUpgrade + ' (' + pet2.upgradeCost + '🪙)';
+        
+        document.getElementById('npcStatus').innerHTML = npcOwned ? LANG[lang].npcOwned : LANG[lang].npcNotOwned;
+        document.getElementById('robotStatus').innerHTML = robotOwned ? LANG[lang].robotOwned : LANG[lang].robotNotOwned;
+    }
+
+    function switchTab(tab) {
+        let tabs = ['mine','market','shop','fortune','achieve','pets','boss','settings','guide'];
+        tabs.forEach(t => document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('hidden', tab !== t));
+        tabs.forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.remove('tab-active'));
+        document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('tab-active');
+        if (tab === 'market') updateMarketDisplay();
+    }
 
     function toggleTheme() { document.body.classList.toggle('light'); localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark'); }
     function toggleLang() { lang = lang === 'ru' ? 'en' : 'ru'; localStorage.setItem('lang', lang); updateUI(); }
     function testVibration() { if (window.navigator && window.navigator.vibrate) { navigator.vibrate(300); addLog('Вибро!'); } else addLog('Вибрация не поддерживается'); }
     function resetProgress() { if (!confirm('Точно удалить весь прогресс?')) return; localStorage.removeItem('shakhter_save'); resetGame(); updateUI(); }
-    function share() { let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1]; let text = `Я играю в "Шахтёра"! Добыл ${totalOre} руды киркой "${pick.name}". Попробуй и ты!`; navigator.clipboard.writeText(text).then(() => addLog('Текст скопирован!')); }
+    function share() { let pick = PICKAXES.find(p => p.level === pickLevel) || PICKAXES[1]; let text = `${LANG[lang].shareText} ${totalOre} ${LANG[lang].shareSuffix} киркой "${pick.name}". ${LANG[lang].tryYou}`; navigator.clipboard.writeText(text).then(() => addLog('Текст скопирован!')); }
 
-    localStorage.removeItem('shakhter_save');
+    function resetGame() {
+        coins = 150; energy = 100; maxEnergy = 100; pickLevel = 2; totalOre = 0; totalStone = 0; totalDiamondFound = false; totalMithril = 0; totalEnergySpent = 0;
+        totalClicks = 0; totalPlayTime = 0; prestigeLevel = 0; prestigeMultiplier = 1;
+        maxEnergyUpgradeLevel = 0; maxEnergyCost = 200; regenUpgradeLevel = 0; regenCost = 200; regenRate = 3;
+        npcOwned = false; robotOwned = false; mineLevel = 1; mineCapacity = 100; mineUpgradeCost = 1000; mutationLevel = 0; depthLevel = 0;
+        bossHP = 0; bossActive = false; bossWeek = 0; explosives = 0;
+        inventory = { stone:0, iron:0, gold:0, diamond:0, mithril:0 }; lastTimestamp = Date.now();
+        pets.pet1 = { owned: false, level: 0, maxLevel: 5, baseCost: 500, upgradeCost: 1000, lastPaid: 0, nameKey: 'pet1Name', descKey: 'pet1Desc' };
+        pets.pet2 = { owned: false, level: 0, maxLevel: 3, baseCost: 800, upgradeCost: 1500, lastPaid: 0, nameKey: 'pet2Name', descKey: 'pet2Desc' };
+        if (npcMineInterval) clearInterval(npcMineInterval);
+        if (robotInterval) clearInterval(robotInterval);
+        saveGame();
+    }
+
+    // ========== СОХРАНЕНИЕ И ЗАГРУЗКА ==========
+    function saveGame() {
+        let data = { coins, energy, maxEnergy, pickLevel, totalOre, totalStone, totalDiamondFound, totalMithril, totalEnergySpent, totalClicks, totalPlayTime, inventory, prestigeLevel, prestigeMultiplier, maxEnergyUpgradeLevel, maxEnergyCost, regenUpgradeLevel, regenCost, regenRate, npcOwned, robotOwned, mineLevel, mineCapacity, mineUpgradeCost, mutationLevel, depthLevel, bossHP, bossActive, bossWeek, explosives, lastTimestamp, pets, lastDaily };
+        localStorage.setItem('shakhter_save', JSON.stringify(data));
+    }
+
+    function loadGame() {
+        let saved = localStorage.getItem('shakhter_save');
+        if (saved) {
+            try {
+                let d = JSON.parse(saved);
+                coins = d.coins ?? 150; if (isNaN(coins)) coins = 150;
+                energy = d.energy ?? 100; energy = Number(energy);
+                maxEnergy = d.maxEnergy ?? 100;
+                pickLevel = d.pickLevel ?? 2; totalOre = d.totalOre ?? 0;
+                totalStone = d.totalStone || 0; totalDiamondFound = d.totalDiamondFound || false;
+                totalMithril = d.totalMithril || 0; totalEnergySpent = d.totalEnergySpent || 0;
+                totalClicks = d.totalClicks || 0; totalPlayTime = d.totalPlayTime || 0;
+                prestigeLevel = d.prestigeLevel || 0; prestigeMultiplier = d.prestigeMultiplier || 1;
+                maxEnergyUpgradeLevel = d.maxEnergyUpgradeLevel || 0; maxEnergyCost = d.maxEnergyCost || 200;
+                regenUpgradeLevel = d.regenUpgradeLevel || 0; regenCost = d.regenCost || 200; regenRate = d.regenRate || 3;
+                npcOwned = d.npcOwned || false;
+                robotOwned = d.robotOwned || false;
+                mineLevel = d.mineLevel || 1; mineCapacity = d.mineCapacity || 100; mineUpgradeCost = d.mineUpgradeCost || 1000;
+                mutationLevel = d.mutationLevel || 0; depthLevel = d.depthLevel || 0;
+                bossHP = d.bossHP || 0; bossActive = d.bossActive || false; bossWeek = d.bossWeek || 0;
+                explosives = d.explosives || 0;
+                inventory = d.inventory || { stone:0, iron:0, gold:0, diamond:0, mithril:0 };
+                lastTimestamp = d.lastTimestamp || Date.now();
+                lastDaily = d.lastDaily || 0;
+                if (d.pets) { pets.pet1 = { ...pets.pet1, ...d.pets.pet1 }; pets.pet2 = { ...pets.pet2, ...d.pets.pet2 }; }
+                if (npcOwned && !npcMineInterval) startNPC();
+                if (robotOwned && !robotInterval) startRobot();
+                if (bossActive && bossWeek !== getCurrentWeek()) { bossActive = false; bossHP = 0; }
+            } catch(e) { resetGame(); }
+        } else { resetGame(); }
+        updateUI();
+    }
+
+    // ========== ТАЙМЕРЫ ==========
+    setInterval(() => {
+        let now = Date.now();
+        if (buffDoubleOre && now > buffDoubleOreEnd) buffDoubleOre = false;
+        if (buffDoubleSell && now > buffDoubleSellEnd) buffDoubleSell = false;
+        showActiveBuffs();
+        if (pets.pet1.owned && pets.pet1.level > 0) {
+            if (!pets.pet1.lastPaid) pets.pet1.lastPaid = now;
+            if (now - pets.pet1.lastPaid >= 1000) { 
+                coins += 1 * pets.pet1.level; 
+                pets.pet1.lastPaid = now - ((now - pets.pet1.lastPaid) % 1000); 
+                updateUI(); 
+            }
+        }
+        if (energy < maxEnergy) { 
+            let diff = Math.floor((now - lastTimestamp) / 1000); 
+            if (diff >= 1) { 
+                energy = Math.min(maxEnergy, energy + diff * regenRate); 
+                lastTimestamp = now; 
+                updateUI();
+            } 
+        }
+        updateUI();
+    }, 1000);
+
+    setInterval(() => { for (let ore in market) { let change = (Math.random() * 0.4) - 0.2; market[ore] = Math.max(1, Math.round(market[ore] * (1 + change))); } updateMarketDisplay(); }, 600000);
+    setInterval(() => { totalPlayTime++; saveGame(); document.getElementById('playTime').innerText = formatTime(totalPlayTime); }, 1000);
+    setInterval(() => { checkBoss(); }, 60000);
+    
+    // Старт игры
     loadGame();
     checkBoss();
-    setInterval(() => { checkBoss(); }, 60000);
+    if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
 </script>
 </body>
-    </html>
+</html>
